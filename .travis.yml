@@ -1,0 +1,7 @@
+language: go
+go: 
+  - release
+env:
+  - "PATH=/home/travis/gopath/bin:$PATH"
+script:
+  - gb build -o gravo *.go
