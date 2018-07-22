@@ -14,11 +14,11 @@ While it is possible to run Grafana against the Volkszaehler database directly u
   2. install Grafana and the [Simple JSON Datasource](https://github.com/grafana/simple-json-datasource) plugin
   3. install and run gravo
 
-      grave -api http://myserver/middleware.php -port 8001 
+          gravo -api http://myserver/middleware.php -port 8001 
 
   4. now create a simple json datasource and point it to gravo running on machine and port chosen before:
 
-      http://gravo-host:8001
+          http://gravo-host:8001
 
   5. start creating dashboards and panels
   
