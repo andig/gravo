@@ -4,4 +4,4 @@ go:
 env:
   - "PATH=/home/travis/gopath/bin:$PATH"
 script:
-  - gb build -o gravo *.go
+  - go build -o gravo *.go

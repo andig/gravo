@@ -10,7 +10,7 @@ While it is possible to run Grafana against the Volkszaehler database directly u
 
 ## Usage
 
-  1. have a working installation of Volkszaehler
+  1. have a working installation of [Volkszaehler](https://github.com/volkszaehler/volkszaehler.org)
   2. install Grafana and the [Simple JSON Datasource](https://github.com/grafana/simple-json-datasource) plugin
   3. install and run gravo
 
@@ -21,4 +21,9 @@ While it is possible to run Grafana against the Volkszaehler database directly u
           http://gravo-host:8001
 
   5. start creating dashboards and panels
-  
+
+## Building
+
+To build for your platform:
+
+    go build -o gravo *.go
