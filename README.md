@@ -5,7 +5,7 @@ gravo - Grafana for Volkszaehler - is an adapter for using [Grafana](https://gra
 While it is possible to run Grafana against the Volkszaehler database directly using the Grafana MySQL datasource, gravo supports additional features:
 
   - metrics discovery: all public channels are discoverable via the Grafana UI
-  - using Volkszaehler data aggregation gravo can perform multi-year queries in sub second query time similar to the native Volkszaehler UI
+  - performance: using Volkszaehler data aggregation gravo can achieve sub-second query times even when retrieving multiple years of data similar to the native Volkszaehler UI
 
 
 ## Usage
@@ -20,7 +20,15 @@ While it is possible to run Grafana against the Volkszaehler database directly u
 
           http://gravo-host:8001
 
+      Example:
+
+      ![Datasource](https://github.com/andig/gravo/blob/master/doc/datasource.png)
+
   5. start creating dashboards and panels
+
+      Example:
+
+       ![Panel](https://github.com/andig/gravo/blob/master/doc/panel.png)
 
 ## Building
 
