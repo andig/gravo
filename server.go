@@ -56,6 +56,59 @@ func (server *Server) annotationsHandler(w http.ResponseWriter, r *http.Request)
 	log.Printf("%v %v (took %s)", r.Method, r.URL.Path, duration.String())
 }
 
+func (server *Server) tagKeysHandler(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+
+	switch r.Method {
+	case http.MethodOptions:
+	case http.MethodPost:
+		resp := []TagKeyResponse{
+			TagKeyResponse{
+				Type: "string",
+				Text: "group"},
+			// TagKeyResponse{
+			// 	Type: "string",
+			// 	Text: "mode"}
+		}
+
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			log.Printf("json encode failed: %v", err)
+			http.Error(w, fmt.Sprintf("json encode failed: %v", err), http.StatusInternalServerError)
+			return
+		}
+	default:
+		http.Error(w, "Bad method; supported OPTIONS, POST", http.StatusBadRequest)
+		return
+	}
+
+	duration := time.Now().Sub(start)
+	log.Printf("%v %v (took %s)", r.Method, r.URL.Path, duration.String())
+}
+
+func (server *Server) tagValuesHandler(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+
+	switch r.Method {
+	case http.MethodOptions:
+	case http.MethodPost:
+		resp := []TagValueResponse{
+			TagValueResponse{"Current"},
+			TagValueResponse{"Consumption"},
+		}
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			log.Printf("json encode failed: %v", err)
+			http.Error(w, fmt.Sprintf("json encode failed: %v", err), http.StatusInternalServerError)
+			return
+		}
+	default:
+		http.Error(w, "Bad method; supported OPTIONS, POST", http.StatusBadRequest)
+		return
+	}
+
+	duration := time.Now().Sub(start)
+	log.Printf("%v %v (took %s)", r.Method, r.URL.Path, duration.String())
+}
+
 func (server *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 
@@ -154,8 +207,20 @@ func (server *Server) executeQuery(qr QueryRequest) []QueryResponse {
 	for _, target := range qr.Targets {
 		wg.Add(1)
 
-		go func(wg *sync.WaitGroup, uuid string, from time.Time, to time.Time, maxDataPoints int) {
-			tuples := server.api.getData(uuid, from, to, maxDataPoints)
+		// go server.apiLoader(wg, &res, qr, target)
+		go func(wg *sync.WaitGroup, target Target) {
+			var group, mode string
+			data := target.Data
+			group, _ = data["group"]
+			mode, _ = data["mode"]
+
+			tuples := server.api.getData(
+				target.Target,
+				qr.Range.From,
+				qr.Range.To,
+				group,
+				mode,
+				qr.MaxDataPoints)
 
 			t := target.Target
 			if title, ok := server.entityCache[target.Target]; ok {
@@ -170,9 +235,10 @@ func (server *Server) executeQuery(qr QueryRequest) []QueryResponse {
 			for _, tuple := range tuples {
 				qtr.Datapoints = append(qtr.Datapoints, Tuple{tuple[1], tuple[0]})
 			}
+
 			res = append(res, *qtr)
 			wg.Done()
-		}(wg, target.Target, qr.Range.From, qr.Range.To, qr.MaxDataPoints)
+		}(wg, target)
 	}
 
 	wg.Wait()

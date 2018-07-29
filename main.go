@@ -66,6 +66,8 @@ func main() {
 	http.HandleFunc("/query", inboundHandler(server.queryHandler, *verbose))
 	http.HandleFunc("/search", inboundHandler(server.searchHandler, *verbose))
 	http.HandleFunc("/annotations", inboundHandler(server.annotationsHandler, *verbose))
+	http.HandleFunc("/tag-keys", inboundHandler(server.tagKeysHandler, *verbose))
+	http.HandleFunc("/tag-values", inboundHandler(server.tagValuesHandler, *verbose))
 
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", *port), nil); err != nil {
 		log.Fatal(err)

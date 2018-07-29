@@ -49,6 +49,17 @@ type Annotation struct {
 	Query      string `json:"query"`
 }
 
+// TagKeyResponse encodes additional query options
+type TagKeyResponse struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
+}
+
+// TagValueResponse encodes additional query option values
+type TagValueResponse struct {
+	Text string `json:"text"`
+}
+
 // QueryRequest encodes the information provided by Grafana in /query.
 // https://github.com/grafana/simple-json-datasource#query-api
 type QueryRequest struct {
@@ -72,10 +83,13 @@ type QueryResponse struct {
 }
 
 type Target struct {
-	Target string `json:"target"`
-	RefID  string `json:"refId"`
-	Type   string `json:"type"`
+	Target string     `json:"target"`
+	RefID  string     `json:"refId"`
+	Type   string     `json:"type"`
+	Data   TargetData `json:"data,omitempty"`
 }
+
+type TargetData map[string]string
 
 type Filter struct {
 	Key      string `json:"key"`
