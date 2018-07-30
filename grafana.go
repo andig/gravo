@@ -4,12 +4,12 @@ import "time"
 
 // AnnotationsRequest encodes the information provided by Grafana in /annotations.
 type AnnotationsRequest struct {
-	Range      Range      `json:"range"`
-	Annotation Annotation `json:"annotation"`
+	Range      Range         `json:"range"`
+	RangeRaw   RelativeRange `json:"rangeRaw"`
+	Annotation Annotation    `json:"annotation"`
 }
 
-// AnnotationResponse contains all the information needed to render an
-// annotation event.
+// AnnotationResponse describes an annotation event
 // https://github.com/grafana/simple-json-datasource#annotation-api
 type AnnotationResponse struct {
 	// The original annotation sent from Grafana.
@@ -76,12 +76,11 @@ type QueryRequest struct {
 
 // QueryResponse contains information to render query result.
 type QueryResponse struct {
-	Target interface{} `json:"target"`
-	// Target     string  `json:"target,omitempty"`
-	// TargetMap  string  `json:"target,omitempty"`
-	Datapoints []Tuple `json:"datapoints"`
+	Target     interface{} `json:"target"`
+	Datapoints []Tuple     `json:"datapoints"`
 }
 
+// Target describes a query target
 type Target struct {
 	Target string     `json:"target"`
 	RefID  string     `json:"refId"`
@@ -91,6 +90,7 @@ type Target struct {
 
 type TargetData map[string]string
 
+// Filter is a compontent of adhoc filters
 type Filter struct {
 	Key      string `json:"key"`
 	Operator string `json:"operator"`

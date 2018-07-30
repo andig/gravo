@@ -21,8 +21,8 @@ func cors(f http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// verboseRequest logs and inbound request body without consuming the request
-func verboseRequest(f http.HandlerFunc) http.HandlerFunc {
+// requestLogger logs and inbound request body without consuming the request
+func requestLogger(f http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%v %v", r.Method, r.URL.Path)
 
@@ -40,7 +40,7 @@ func verboseRequest(f http.HandlerFunc) http.HandlerFunc {
 // inboundHandler builds inbound request processing stack
 func inboundHandler(f http.HandlerFunc, debug bool) http.HandlerFunc {
 	if debug {
-		f = verboseRequest(f)
+		f = requestLogger(f)
 	}
 	return cors(f)
 }
