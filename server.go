@@ -209,17 +209,20 @@ func (server *Server) executeQuery(qr QueryRequest) []QueryResponse {
 
 		// go server.apiLoader(wg, &res, qr, target)
 		go func(wg *sync.WaitGroup, target Target) {
-			var group, mode string
+			var group, options string
 			data := target.Data
 			group, _ = data["group"]
-			mode, _ = data["mode"]
+			options, _ = data["options"]
+			if options == "" {
+				options, _ = data["mode"]
+			}
 
 			tuples := server.api.getData(
 				target.Target,
 				qr.Range.From,
 				qr.Range.To,
 				group,
-				mode,
+				options,
 				qr.MaxDataPoints)
 
 			t := target.Target

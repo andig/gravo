@@ -89,7 +89,7 @@ func getGroup(d int64) string {
 	return ""
 }
 
-func (api *Api) getData(uuid string, from time.Time, to time.Time, group string, mode string, maxTuples int) []Tuple {
+func (api *Api) getData(uuid string, from time.Time, to time.Time, group string, options string, maxTuples int) []Tuple {
 	f := from.Unix()
 	t := to.Unix()
 	url := fmt.Sprintf("/data/%s.json?from=%d&to=%d&tuples=%d", uuid, f*1000, t*1000, maxTuples)
@@ -102,8 +102,8 @@ func (api *Api) getData(uuid string, from time.Time, to time.Time, group string,
 		url += "&group=" + group
 	}
 
-	if mode != "" {
-		url += "&mode=" + mode
+	if options != "" {
+		url += "&options=" + options
 	}
 
 	r, err := api.get(url)
