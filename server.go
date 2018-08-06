@@ -14,12 +14,14 @@ import (
 type Server struct {
 	api         *Api
 	entityCache map[string]string
+	debug       bool
 }
 
-func newServer(api *Api) *Server {
+func newServer(api *Api, debug bool) *Server {
 	return &Server{
 		api:         api,
 		entityCache: make(map[string]string),
+		debug:       debug,
 	}
 }
 
@@ -42,6 +44,12 @@ func (server *Server) annotationsHandler(w http.ResponseWriter, r *http.Request)
 		}
 
 		resp := []AnnotationResponse{}
+
+		if server.debug {
+			j, _ := json.Marshal(resp)
+			log.Println(string(j))
+		}
+
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			log.Printf("json encode failed: %v", err)
 			http.Error(w, fmt.Sprintf("json encode failed: %v", err), http.StatusInternalServerError)
@@ -71,6 +79,11 @@ func (server *Server) tagKeysHandler(w http.ResponseWriter, r *http.Request) {
 			// 	Text: "mode"}
 		}
 
+		if server.debug {
+			j, _ := json.Marshal(resp)
+			log.Println(string(j))
+		}
+
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			log.Printf("json encode failed: %v", err)
 			http.Error(w, fmt.Sprintf("json encode failed: %v", err), http.StatusInternalServerError)
@@ -95,6 +108,12 @@ func (server *Server) tagValuesHandler(w http.ResponseWriter, r *http.Request) {
 			TagValueResponse{"Current"},
 			TagValueResponse{"Consumption"},
 		}
+
+		if server.debug {
+			j, _ := json.Marshal(resp)
+			log.Println(string(j))
+		}
+
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			log.Printf("json encode failed: %v", err)
 			http.Error(w, fmt.Sprintf("json encode failed: %v", err), http.StatusInternalServerError)
@@ -123,6 +142,11 @@ func (server *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		resp := server.executeSearch(sr)
+
+		if server.debug {
+			j, _ := json.Marshal(resp)
+			log.Println(string(j))
+		}
 
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			log.Printf("json encode failed: %v", err)
@@ -185,6 +209,11 @@ func (server *Server) queryHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		resp := server.executeQuery(qr)
+
+		if server.debug {
+			j, _ := json.Marshal(resp)
+			log.Println(string(j))
+		}
 
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			log.Printf("json encode failed: %v", err)
