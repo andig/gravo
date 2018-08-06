@@ -200,6 +200,21 @@ func (server *Server) queryHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%v %v (took %s)", r.Method, r.URL.Path, duration.String())
 }
 
+func roundTimestamp(ts float32, group string) float32 {
+	t := time.Unix(int64(ts/1000), 0)
+
+	switch group {
+	case "hour":
+		t = t.Truncate(time.Hour)
+	case "day":
+		t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.Local)
+	case "month":
+		t = time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.Local)
+	}
+
+	return float32(t.Unix() * 1000)
+}
+
 func (server *Server) executeQuery(qr QueryRequest) []QueryResponse {
 	res := []QueryResponse{}
 	wg := &sync.WaitGroup{}
@@ -236,7 +251,11 @@ func (server *Server) executeQuery(qr QueryRequest) []QueryResponse {
 			}
 
 			for _, tuple := range tuples {
-				qtr.Datapoints = append(qtr.Datapoints, Tuple{tuple[1], tuple[0]})
+				ts := tuple[0]
+				if group != "" {
+					ts = roundTimestamp(ts, group)
+				}
+				qtr.Datapoints = append(qtr.Datapoints, Tuple{tuple[1], ts})
 			}
 
 			res = append(res, *qtr)
