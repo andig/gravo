@@ -229,19 +229,19 @@ func (server *Server) queryHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%v %v (took %s)", r.Method, r.URL.Path, duration.String())
 }
 
-func roundTimestamp(ts float32, group string) float32 {
-	t := time.Unix(int64(ts/1000), 0)
+func roundTimestampMS(ts int64, group string) int64 {
+	t := time.Unix(ts/1000, 0)
 
 	switch group {
 	case "hour":
-		t = t.Truncate(time.Hour)
+		t = time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), 0, 0, 0, time.Local)
 	case "day":
 		t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.Local)
 	case "month":
 		t = time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.Local)
 	}
 
-	return float32(t.Unix() * 1000)
+	return t.Unix() * 1000
 }
 
 func (server *Server) executeQuery(qr QueryRequest) []QueryResponse {
@@ -281,18 +281,21 @@ func (server *Server) executeQuery(qr QueryRequest) []QueryResponse {
 
 			for _, tuple := range tuples {
 				ts := tuple[0]
+				log.Println(time.Unix(int64(ts/1000), 0))
+				/*
+					if ts < float64(qr.Range.From.Unix()*1000) {
+						continue
+					}
 
-				if ts < float32(qr.Range.From.Unix()*1000) {
-					continue
-				}
-
-				if ts > float32(qr.Range.To.Unix()*1000) {
-					continue
-				}
-
+					if ts > float64(qr.Range.To.Unix()*1000) {
+						continue
+					}
+				*/
 				if group != "" {
-					ts = roundTimestamp(ts, group)
+					ts = float64(roundTimestampMS(int64(ts), group))
 				}
+				log.Println(time.Unix(int64(ts/1000), 0))
+
 				qtr.Datapoints = append(qtr.Datapoints, Tuple{tuple[1], ts})
 			}
 

@@ -22,4 +22,4 @@ type DataStruct struct {
 	Tuples []Tuple `json:"tuples"`
 }
 
-type Tuple []float32
+type Tuple []float64
