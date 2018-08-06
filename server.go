@@ -281,6 +281,15 @@ func (server *Server) executeQuery(qr QueryRequest) []QueryResponse {
 
 			for _, tuple := range tuples {
 				ts := tuple[0]
+
+				if ts < float32(qr.Range.From.Unix()*1000) {
+					continue
+				}
+
+				if ts > float32(qr.Range.To.Unix()*1000) {
+					continue
+				}
+
 				if group != "" {
 					ts = roundTimestamp(ts, group)
 				}
