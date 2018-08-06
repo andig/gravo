@@ -281,7 +281,7 @@ func (server *Server) executeQuery(qr QueryRequest) []QueryResponse {
 
 			for _, tuple := range tuples {
 				ts := tuple[0]
-				log.Println(time.Unix(int64(ts/1000), 0))
+				// log.Println(time.Unix(int64(ts/1000), 0))
 				/*
 					if ts < float64(qr.Range.From.Unix()*1000) {
 						continue
@@ -294,7 +294,7 @@ func (server *Server) executeQuery(qr QueryRequest) []QueryResponse {
 				if group != "" {
 					ts = float64(roundTimestampMS(int64(ts), group))
 				}
-				log.Println(time.Unix(int64(ts/1000), 0))
+				// log.Println(time.Unix(int64(ts/1000), 0))
 
 				qtr.Datapoints = append(qtr.Datapoints, Tuple{tuple[1], ts})
 			}
