@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -18,11 +19,16 @@ type Server struct {
 }
 
 func newServer(api *Api, debug bool) *Server {
-	return &Server{
+	server := &Server{
 		api:         api,
 		entityCache: make(map[string]string),
 		debug:       debug,
 	}
+
+	// get entity map on startup
+	server.getPublicEntites()
+
+	return server
 }
 
 func (server *Server) rootHandler(w http.ResponseWriter, r *http.Request) {
@@ -162,10 +168,10 @@ func (server *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%v %v (took %s)", r.Method, r.URL.Path, duration.String())
 }
 
-func addEntitiesRecursive(result *[]Entity, entities []Entity, parent string) {
+func (server *Server) flattenEntities(result *[]Entity, entities []Entity, parent string) {
 	for _, entity := range entities {
 		if entity.Type == "group" {
-			addEntitiesRecursive(result, entity.Children, entity.Title)
+			server.flattenEntities(result, entity.Children, entity.Title)
 		} else {
 			if parent != "" {
 				entity.Title = fmt.Sprintf("%s (%s)", entity.Title, parent)
@@ -175,17 +181,31 @@ func addEntitiesRecursive(result *[]Entity, entities []Entity, parent string) {
 	}
 }
 
-func (server *Server) executeSearch(sr SearchRequest) []SearchResponse {
-	entities := []Entity{}
-	addEntitiesRecursive(&entities, server.api.getEntities(), "")
+func (server *Server) populateCache(entities []Entity) {
+	if len(entities) > 0 {
+		server.entityCache = make(map[string]string)
+	}
 
-	res := []SearchResponse{}
+	// add to cache
 	for _, entity := range entities {
-		// add to cache
 		if _, ok := server.entityCache[entity.UUID]; !ok {
 			server.entityCache[entity.UUID] = entity.Title
 		}
+	}
+}
 
+func (server *Server) getPublicEntites() []Entity {
+	entities := make([]Entity, 0)
+	server.flattenEntities(&entities, server.api.getEntities(), "")
+	server.populateCache(entities)
+	return entities
+}
+
+func (server *Server) executeSearch(sr SearchRequest) []SearchResponse {
+	entities := server.getPublicEntites()
+
+	res := []SearchResponse{}
+	for _, entity := range entities {
 		res = append(res, SearchResponse{
 			Text: entity.Title,
 			UUID: entity.UUID,
@@ -208,7 +228,7 @@ func (server *Server) queryHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		resp := server.executeQuery(qr)
+		resp := server.sortQueryResponse(qr, server.executeQuery(qr))
 
 		if server.debug {
 			j, _ := json.Marshal(resp)
@@ -229,12 +249,32 @@ func (server *Server) queryHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%v %v (took %s)", r.Method, r.URL.Path, duration.String())
 }
 
+func (server *Server) sortQueryResponse(qr QueryRequest, resp []QueryResponse) (res []QueryResponse) {
+	// sort by query targets
+	for _, target := range qr.Targets {
+		for _, metric := range resp {
+			if metric.Target.(string) == target.Target {
+				res = append(res, metric)
+			}
+		}
+	}
+
+	// substitute name
+	for idx, metric := range res {
+		if text, ok := server.entityCache[metric.Target.(string)]; ok {
+			res[idx].Target = text
+		}
+	}
+
+	return res
+}
+
 func roundTimestampMS(ts int64, group string) int64 {
 	t := time.Unix(ts/1000, 0)
 
 	switch group {
 	case "hour":
-		t = time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), 0, 0, 0, time.Local)
+		t.Truncate(time.Hour)
 	case "day":
 		t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.Local)
 	case "month":
@@ -251,14 +291,15 @@ func (server *Server) executeQuery(qr QueryRequest) []QueryResponse {
 	for _, target := range qr.Targets {
 		wg.Add(1)
 
-		// go server.apiLoader(wg, &res, qr, target)
 		go func(wg *sync.WaitGroup, target Target) {
 			var group, options string
+
 			data := target.Data
-			group, _ = data["group"]
-			options, _ = data["options"]
-			if options == "" {
-				options, _ = data["mode"]
+			if group, ok := data["group"]; ok {
+				group = strings.ToLower(group)
+			}
+			if options, ok := data["options"]; ok {
+				options = strings.ToLower(options)
 			}
 
 			tuples := server.api.getData(
@@ -269,32 +310,16 @@ func (server *Server) executeQuery(qr QueryRequest) []QueryResponse {
 				options,
 				qr.MaxDataPoints)
 
-			t := target.Target
-			if title, ok := server.entityCache[target.Target]; ok {
-				t = title
-			}
-
 			qtr := &QueryResponse{
-				Target:     t,
+				Target:     target.Target,
 				Datapoints: []Tuple{},
 			}
 
 			for _, tuple := range tuples {
 				ts := tuple[0]
-				// log.Println(time.Unix(int64(ts/1000), 0))
-				/*
-					if ts < float64(qr.Range.From.Unix()*1000) {
-						continue
-					}
-
-					if ts > float64(qr.Range.To.Unix()*1000) {
-						continue
-					}
-				*/
 				if group != "" {
 					ts = float64(roundTimestampMS(int64(ts), group))
 				}
-				// log.Println(time.Unix(int64(ts/1000), 0))
 
 				qtr.Datapoints = append(qtr.Datapoints, Tuple{tuple[1], ts})
 			}
