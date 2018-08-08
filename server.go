@@ -295,11 +295,11 @@ func (server *Server) executeQuery(qr QueryRequest) []QueryResponse {
 			var group, options string
 
 			data := target.Data
-			if group, ok := data["group"]; ok {
-				group = strings.ToLower(group)
+			if grp, ok := data["group"]; ok {
+				group = strings.ToLower(grp)
 			}
-			if options, ok := data["options"]; ok {
-				options = strings.ToLower(options)
+			if opt, ok := data["options"]; ok {
+				options = strings.ToLower(opt)
 			}
 
 			tuples := server.api.getData(
