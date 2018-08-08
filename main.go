@@ -59,7 +59,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	api := newAPI(apiURL, apiTimeout, *verbose)
+	api := newAPI(*apiURL, apiTimeout, *verbose)
 	server := newServer(api, *verbose)
 
 	http.HandleFunc("/", inboundHandler(server.rootHandler, *verbose))

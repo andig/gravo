@@ -16,14 +16,48 @@ type Api struct {
 	debug  bool
 }
 
-func newAPI(url *string, timeout *time.Duration, debug bool) *Api {
+func newAPI(url string, timeout *time.Duration, debug bool) *Api {
 	return &Api{
-		url: *url,
+		url: detectApiEndpoint(url),
 		client: http.Client{
 			Timeout: *timeout,
 		},
 		debug: debug,
 	}
+}
+
+func detectApiEndpoint(url string) string {
+	probe := "/entity.json"
+
+	// strip trailing slash
+	if url[len(url)-1:] == "/" {
+		url = url[0 : len(url)-1]
+	}
+
+	if resp, err := http.Get(url + probe); err == nil {
+		// append middleware.php
+		detectedURL := url + "/middleware.php"
+		if resp.StatusCode != 200 {
+			log.Println("API endpoint not responding. Trying " + detectedURL)
+		}
+
+		if resp, err = http.Get(detectedURL + probe); err == nil {
+			if resp.StatusCode != 200 {
+				log.Println("API endpoint still not responding. Keeping specified uri")
+			} else {
+				log.Println("API endpoint detected, using " + detectedURL)
+				url = detectedURL
+			}
+		}
+	}
+
+	return url
+}
+
+func (api *Api) validate() {
+	resp, err := http.Get(api.url)
+	log.Println(err)
+	log.Fatal(resp)
 }
 
 func (api *Api) get(endpoint string) (*http.Response, error) {
