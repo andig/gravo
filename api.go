@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -27,30 +28,28 @@ func newAPI(url string, timeout *time.Duration, debug bool) *Api {
 }
 
 func detectApiEndpoint(url string) string {
-	probe := "/entity.json"
+	const probe = "/entity.json"
 
-	// strip trailing slash
-	if url[len(url)-1:] == "/" {
-		url = url[0 : len(url)-1]
+	url = strings.TrimRight(url, "/")
+	log.Println("Validating API endpoint")
+
+	resp, err := http.Get(url + probe)
+	if err == nil && resp.StatusCode == 200 {
+		log.Println("API endpoint validated")
+		return url
 	}
 
-	if resp, err := http.Get(url + probe); err == nil {
-		// append middleware.php
-		detectedURL := url + "/middleware.php"
-		if resp.StatusCode != 200 {
-			log.Println("API endpoint not responding. Trying " + detectedURL)
-		}
+	// append middleware.php
+	detectedURL := url + "/middleware.php"
+	log.Println("API endpoint not responding. Trying " + detectedURL)
 
-		if resp, err = http.Get(detectedURL + probe); err == nil {
-			if resp.StatusCode != 200 {
-				log.Println("API endpoint still not responding. Keeping specified uri")
-			} else {
-				log.Println("API endpoint detected, using " + detectedURL)
-				url = detectedURL
-			}
-		}
+	resp, err = http.Get(detectedURL + probe)
+	if err == nil && resp.StatusCode == 200 {
+		log.Println("API endpoint detected, using " + detectedURL)
+		return detectedURL
 	}
 
+	log.Println("API endpoint still not responding. Will keep retrying using configured uri")
 	return url
 }
 
