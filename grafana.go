@@ -1,6 +1,9 @@
 package main
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // AnnotationsRequest encodes the information provided by Grafana in /annotations.
 type AnnotationsRequest struct {
@@ -76,8 +79,21 @@ type QueryRequest struct {
 
 // QueryResponse contains information to render query result.
 type QueryResponse struct {
-	Target     interface{} `json:"target"`
-	Datapoints []Tuple     `json:"datapoints"`
+	Target     interface{}     `json:"target"`
+	Datapoints []ResponseTuple `json:"datapoints"`
+}
+
+type ResponseTuple struct {
+	Value     float32
+	Timestamp int64
+}
+
+func (t *ResponseTuple) MarshalJSON() ([]byte, error) {
+	a := []interface{}{
+		t.Value,
+		t.Timestamp,
+	}
+	return json.Marshal(a)
 }
 
 // Target describes a query target

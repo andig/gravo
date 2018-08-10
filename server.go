@@ -312,16 +312,18 @@ func (server *Server) executeQuery(qr QueryRequest) []QueryResponse {
 
 			qtr := &QueryResponse{
 				Target:     target.Target,
-				Datapoints: []Tuple{},
+				Datapoints: []ResponseTuple{},
 			}
 
 			for _, tuple := range tuples {
-				ts := tuple[0]
 				if group != "" {
-					ts = float64(roundTimestampMS(int64(ts), group))
+					tuple.Timestamp = roundTimestampMS(tuple.Timestamp, group)
 				}
 
-				qtr.Datapoints = append(qtr.Datapoints, Tuple{tuple[1], ts})
+				qtr.Datapoints = append(qtr.Datapoints, ResponseTuple{
+					Timestamp: tuple.Timestamp,
+					Value:     tuple.Value,
+				})
 			}
 
 			res = append(res, *qtr)
