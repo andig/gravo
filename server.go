@@ -286,51 +286,105 @@ func roundTimestampMS(ts int64, group string) int64 {
 
 func (server *Server) executeQuery(qr QueryRequest) []QueryResponse {
 	res := []QueryResponse{}
-	wg := &sync.WaitGroup{}
+	recv := make(chan QueryResponse)
+	quit := make(chan bool)
 
+	// consolidate responses
+	go func() {
+		for {
+			select {
+			case queryResponse := <-recv:
+				res = append(res, queryResponse)
+			case <-quit:
+				return
+			}
+		}
+	}()
+
+	// collect responses
+	wg := &sync.WaitGroup{}
 	for _, target := range qr.Targets {
 		wg.Add(1)
 
-		go func(wg *sync.WaitGroup, target Target) {
-			var group, options string
+		var context string
+		if ctx, ok := target.Data["context"]; ok {
+			context = strings.ToLower(ctx)
+		}
 
-			data := target.Data
-			if grp, ok := data["group"]; ok {
-				group = strings.ToLower(grp)
-			}
-			if opt, ok := data["options"]; ok {
-				options = strings.ToLower(opt)
-			}
+		log.Println("--")
+		log.Println(target.Data)
+		log.Println(context)
 
-			tuples := server.api.getData(
-				target.Target,
-				qr.Range.From,
-				qr.Range.To,
-				group,
-				options,
-				qr.MaxDataPoints)
+		if context == "prognosis" {
+			go server.queryPrognosis(wg, target, recv)
+		} else {
+			go server.queryData(wg, target, &qr, recv)
+		}
+	}
+	wg.Wait()
 
-			qtr := &QueryResponse{
-				Target:     target.Target,
-				Datapoints: []ResponseTuple{},
-			}
+	quit <- true // stop consolidation
+	return res
+}
 
-			for _, tuple := range tuples {
-				if group != "" {
-					tuple.Timestamp = roundTimestampMS(tuple.Timestamp, group)
-				}
+func (server *Server) queryData(wg *sync.WaitGroup, target Target,
+	qr *QueryRequest, recv chan QueryResponse) {
+	var group, options string
 
-				qtr.Datapoints = append(qtr.Datapoints, ResponseTuple{
-					Timestamp: tuple.Timestamp,
-					Value:     tuple.Value,
-				})
-			}
-
-			res = append(res, *qtr)
-			wg.Done()
-		}(wg, target)
+	data := target.Data
+	if grp, ok := data["group"]; ok {
+		group = strings.ToLower(grp)
+	}
+	if opt, ok := data["options"]; ok {
+		options = strings.ToLower(opt)
 	}
 
-	wg.Wait()
-	return res
+	tuples := server.api.getData(
+		target.Target,
+		qr.Range.From,
+		qr.Range.To,
+		group,
+		options,
+		qr.MaxDataPoints)
+
+	qtr := QueryResponse{
+		Target:     target.Target,
+		Datapoints: []ResponseTuple{},
+	}
+
+	for _, tuple := range tuples {
+		if group != "" {
+			tuple.Timestamp = roundTimestampMS(tuple.Timestamp, group)
+		}
+
+		qtr.Datapoints = append(qtr.Datapoints, ResponseTuple{
+			Timestamp: tuple.Timestamp,
+			Value:     tuple.Value,
+		})
+	}
+
+	recv <- qtr
+	wg.Done()
+}
+
+func (server *Server) queryPrognosis(wg *sync.WaitGroup, target Target,
+	recv chan QueryResponse) {
+
+	qtr := QueryResponse{
+		Target:     target.Target,
+		Datapoints: []ResponseTuple{},
+	}
+
+	period, ok := target.Data["period"]
+	if ok {
+		pr := server.api.getPrognosis(target.Target, period)
+
+		qtr.Datapoints = append(qtr.Datapoints, ResponseTuple{
+			Value:     pr.Consumption,
+			Timestamp: time.Now().Unix(),
+		})
+	}
+
+	recv <- qtr
+	wg.Done()
 }

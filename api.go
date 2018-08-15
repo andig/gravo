@@ -157,3 +157,20 @@ func (api *Api) getData(uuid string, from time.Time, to time.Time, group string,
 
 	return dr.Data.Tuples
 }
+
+func (api *Api) getPrognosis(uuid string, period string) PrognosisStruct {
+	url := fmt.Sprintf("/prognosis/%s.json?period=%s", uuid, period)
+
+	r, err := api.get(url)
+	if err != nil {
+		return PrognosisStruct{}
+	}
+
+	pr := PrognosisResponse{}
+	if err := json.NewDecoder(r.Body).Decode(&pr); err != nil {
+		log.Printf("json decode failed: %v", err)
+		return PrognosisStruct{}
+	}
+
+	return pr.Prognosis
+}

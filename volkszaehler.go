@@ -29,6 +29,16 @@ type Tuple struct {
 	Value     float32
 }
 
+type PrognosisResponse struct {
+	Version   string          `json:"version"`
+	Prognosis PrognosisStruct `json:"prognosis"`
+}
+
+type PrognosisStruct struct {
+	Consumption float32 `json:"consumption"`
+	Fator       float32 `json:"factor"`
+}
+
 // UnmarshalJSON converts volkszaehler tuple into Tuple struct
 func (t *Tuple) UnmarshalJSON(b []byte) error {
 	var a []*json.RawMessage
