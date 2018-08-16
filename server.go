@@ -228,7 +228,7 @@ func (server *Server) queryHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		resp := server.sortQueryResponse(qr, server.executeQuery(qr))
+		resp := server.executeQuery(qr)
 
 		if server.debug {
 			j, _ := json.Marshal(resp)
@@ -249,26 +249,6 @@ func (server *Server) queryHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%v %v (took %s)", r.Method, r.URL.Path, duration.String())
 }
 
-func (server *Server) sortQueryResponse(qr QueryRequest, resp []QueryResponse) (res []QueryResponse) {
-	// sort by query targets
-	for _, target := range qr.Targets {
-		for _, metric := range resp {
-			if metric.Target.(string) == target.Target {
-				res = append(res, metric)
-			}
-		}
-	}
-
-	// substitute name
-	for idx, metric := range res {
-		if text, ok := server.entityCache[metric.Target.(string)]; ok {
-			res[idx].Target = text
-		}
-	}
-
-	return res
-}
-
 func roundTimestampMS(ts int64, group string) int64 {
 	t := time.Unix(ts/1000, 0)
 
@@ -285,52 +265,50 @@ func roundTimestampMS(ts int64, group string) int64 {
 }
 
 func (server *Server) executeQuery(qr QueryRequest) []QueryResponse {
-	res := []QueryResponse{}
-	recv := make(chan QueryResponse)
-	quit := make(chan bool)
-
-	// consolidate responses
-	go func() {
-		for {
-			select {
-			case queryResponse := <-recv:
-				res = append(res, queryResponse)
-			case <-quit:
-				return
-			}
-		}
-	}()
-
-	// collect responses
+	res := make([]QueryResponse, len(qr.Targets))
 	wg := &sync.WaitGroup{}
-	for _, target := range qr.Targets {
+
+	for idx, target := range qr.Targets {
 		wg.Add(1)
 
-		var context string
-		if ctx, ok := target.Data["context"]; ok {
-			context = strings.ToLower(ctx)
-		}
+		go func(idx int, target Target) {
+			var context string
+			if ctx, ok := target.Data["context"]; ok {
+				context = strings.ToLower(ctx)
+			}
 
-		log.Println("--")
-		log.Println(target.Data)
-		log.Println(context)
+			log.Println("--")
+			log.Println(target.Data)
+			log.Println(context)
 
-		if context == "prognosis" {
-			go server.queryPrognosis(wg, target, recv)
-		} else {
-			go server.queryData(wg, target, &qr, recv)
-		}
+			var qres QueryResponse
+			if context == "prognosis" {
+				qres = server.queryPrognosis(target)
+			} else {
+				qres = server.queryData(target, &qr)
+			}
+
+			// substitute name
+			if text, ok := server.entityCache[qres.Target.(string)]; ok {
+				qres.Target = text
+			}
+
+			res[idx] = qres
+			wg.Done()
+		}(idx, target)
 	}
 	wg.Wait()
 
-	quit <- true // stop consolidation
 	return res
 }
 
-func (server *Server) queryData(wg *sync.WaitGroup, target Target,
-	qr *QueryRequest, recv chan QueryResponse) {
-	var group, options string
+func (server *Server) queryData(target Target, qr *QueryRequest) QueryResponse {
+	qres := QueryResponse{
+		Target:     target.Target,
+		Datapoints: []ResponseTuple{},
+	}
 
+	var group, options string
 	data := target.Data
 	if grp, ok := data["group"]; ok {
 		group = strings.ToLower(grp)
@@ -347,30 +325,22 @@ func (server *Server) queryData(wg *sync.WaitGroup, target Target,
 		options,
 		qr.MaxDataPoints)
 
-	qtr := QueryResponse{
-		Target:     target.Target,
-		Datapoints: []ResponseTuple{},
-	}
-
 	for _, tuple := range tuples {
 		if group != "" {
 			tuple.Timestamp = roundTimestampMS(tuple.Timestamp, group)
 		}
 
-		qtr.Datapoints = append(qtr.Datapoints, ResponseTuple{
+		qres.Datapoints = append(qres.Datapoints, ResponseTuple{
 			Timestamp: tuple.Timestamp,
 			Value:     tuple.Value,
 		})
 	}
 
-	recv <- qtr
-	wg.Done()
+	return qres
 }
 
-func (server *Server) queryPrognosis(wg *sync.WaitGroup, target Target,
-	recv chan QueryResponse) {
-
-	qtr := QueryResponse{
+func (server *Server) queryPrognosis(target Target) QueryResponse {
+	qres := QueryResponse{
 		Target:     target.Target,
 		Datapoints: []ResponseTuple{},
 	}
@@ -379,12 +349,11 @@ func (server *Server) queryPrognosis(wg *sync.WaitGroup, target Target,
 	if ok {
 		pr := server.api.getPrognosis(target.Target, period)
 
-		qtr.Datapoints = append(qtr.Datapoints, ResponseTuple{
+		qres.Datapoints = append(qres.Datapoints, ResponseTuple{
 			Value:     pr.Consumption,
 			Timestamp: time.Now().Unix(),
 		})
 	}
 
-	recv <- qtr
-	wg.Done()
+	return qres
 }
