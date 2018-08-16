@@ -277,10 +277,6 @@ func (server *Server) executeQuery(qr QueryRequest) []QueryResponse {
 				context = strings.ToLower(ctx)
 			}
 
-			log.Println("--")
-			log.Println(target.Data)
-			log.Println(context)
-
 			var qres QueryResponse
 			if context == "prognosis" {
 				qres = server.queryPrognosis(target)
@@ -345,8 +341,7 @@ func (server *Server) queryPrognosis(target Target) QueryResponse {
 		Datapoints: []ResponseTuple{},
 	}
 
-	period, ok := target.Data["period"]
-	if ok {
+	if period, ok := target.Data["period"]; ok {
 		pr := server.api.getPrognosis(target.Target, period)
 
 		qres.Datapoints = append(qres.Datapoints, ResponseTuple{
