@@ -37,12 +37,16 @@ func logger(f http.HandlerFunc, debug bool) http.HandlerFunc {
 
 		var body []byte
 		if debug {
+			// get request body
 			var err error
 			body, err = ioutil.ReadAll(r.Body)
 			if err != nil {
 				log.Print(err)
 			}
 			r.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+
+			// get response body
+			w = newLoggingResponseWriter(w)
 		}
 
 		f(w, r)
@@ -51,9 +55,24 @@ func logger(f http.HandlerFunc, debug bool) http.HandlerFunc {
 		log.Printf("%v %v (%dms)", r.Method, r.URL.Path, duration.Nanoseconds()/1e6)
 
 		if debug {
-			log.Printf("\n" + string(body))
+			log.Println("Request:\n" + string(body))
+			log.Println("Response:\n" + string(w.(loggingResponseWriter).body))
 		}
 	}
+}
+
+type loggingResponseWriter struct {
+	http.ResponseWriter
+	body []byte
+}
+
+func newLoggingResponseWriter(w http.ResponseWriter) loggingResponseWriter {
+	return loggingResponseWriter{w, []byte{}}
+}
+
+func (w loggingResponseWriter) Write(b []byte) (int, error) {
+	w.body = append(w.body, b...)
+	return w.ResponseWriter.Write(b)
 }
 
 // handler builds inbound request processing stack

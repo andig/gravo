@@ -23,7 +23,7 @@ func main() {
 	}
 
 	api := newAPI(*apiURL, apiTimeout, *verbose)
-	server := newServer(api, *verbose)
+	server := newServer(api)
 
 	http.HandleFunc("/", handler(server.rootHandler, *verbose))
 	http.HandleFunc("/query", handler(server.queryHandler, *verbose))
