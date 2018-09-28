@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
@@ -32,140 +31,90 @@ func newServer(api *Api, debug bool) *Server {
 }
 
 func (server *Server) rootHandler(w http.ResponseWriter, r *http.Request) {
-	body, _ := ioutil.ReadAll(r.Body)
-	log.Printf("%v", string(body))
 	fmt.Fprintf(w, "ok\n")
 }
 
 func (server *Server) annotationsHandler(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
-
-	switch r.Method {
-	case http.MethodOptions:
-	case http.MethodPost:
-		ar := AnnotationsRequest{}
-		if err := json.NewDecoder(r.Body).Decode(&ar); err != nil {
-			http.Error(w, fmt.Sprintf("json decode failed: %v", err), http.StatusBadRequest)
-			return
-		}
-
-		resp := []AnnotationResponse{}
-
-		if server.debug {
-			j, _ := json.Marshal(resp)
-			log.Println(string(j))
-		}
-
-		if err := json.NewEncoder(w).Encode(resp); err != nil {
-			log.Printf("json encode failed: %v", err)
-			http.Error(w, fmt.Sprintf("json encode failed: %v", err), http.StatusInternalServerError)
-			return
-		}
-	default:
-		http.Error(w, "Bad method; supported OPTIONS, POST", http.StatusBadRequest)
+	ar := AnnotationsRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&ar); err != nil {
+		http.Error(w, fmt.Sprintf("json decode failed: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	duration := time.Now().Sub(start)
-	log.Printf("%v %v (took %s)", r.Method, r.URL.Path, duration.String())
+	resp := []AnnotationResponse{}
+
+	if server.debug {
+		j, _ := json.Marshal(resp)
+		log.Println(string(j))
+	}
+
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		log.Printf("json encode failed: %v", err)
+		http.Error(w, fmt.Sprintf("json encode failed: %v", err), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (server *Server) tagKeysHandler(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
-
-	switch r.Method {
-	case http.MethodOptions:
-	case http.MethodPost:
-		resp := []TagKeyResponse{
-			TagKeyResponse{
-				Type: "string",
-				Text: "group"},
-			// TagKeyResponse{
-			// 	Type: "string",
-			// 	Text: "mode"}
-		}
-
-		if server.debug {
-			j, _ := json.Marshal(resp)
-			log.Println(string(j))
-		}
-
-		if err := json.NewEncoder(w).Encode(resp); err != nil {
-			log.Printf("json encode failed: %v", err)
-			http.Error(w, fmt.Sprintf("json encode failed: %v", err), http.StatusInternalServerError)
-			return
-		}
-	default:
-		http.Error(w, "Bad method; supported OPTIONS, POST", http.StatusBadRequest)
-		return
+	resp := []TagKeyResponse{
+		TagKeyResponse{
+			Type: "string",
+			Text: "group"},
+		// TagKeyResponse{
+		// 	Type: "string",
+		// 	Text: "mode"}
 	}
 
-	duration := time.Now().Sub(start)
-	log.Printf("%v %v (took %s)", r.Method, r.URL.Path, duration.String())
+	if server.debug {
+		j, _ := json.Marshal(resp)
+		log.Println(string(j))
+	}
+
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		log.Printf("json encode failed: %v", err)
+		http.Error(w, fmt.Sprintf("json encode failed: %v", err), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (server *Server) tagValuesHandler(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
-
-	switch r.Method {
-	case http.MethodOptions:
-	case http.MethodPost:
-		resp := []TagValueResponse{
-			TagValueResponse{"Current"},
-			TagValueResponse{"Consumption"},
-		}
-
-		if server.debug {
-			j, _ := json.Marshal(resp)
-			log.Println(string(j))
-		}
-
-		if err := json.NewEncoder(w).Encode(resp); err != nil {
-			log.Printf("json encode failed: %v", err)
-			http.Error(w, fmt.Sprintf("json encode failed: %v", err), http.StatusInternalServerError)
-			return
-		}
-	default:
-		http.Error(w, "Bad method; supported OPTIONS, POST", http.StatusBadRequest)
-		return
+	resp := []TagValueResponse{
+		TagValueResponse{"Current"},
+		TagValueResponse{"Consumption"},
 	}
 
-	duration := time.Now().Sub(start)
-	log.Printf("%v %v (took %s)", r.Method, r.URL.Path, duration.String())
+	if server.debug {
+		j, _ := json.Marshal(resp)
+		log.Println(string(j))
+	}
+
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		log.Printf("json encode failed: %v", err)
+		http.Error(w, fmt.Sprintf("json encode failed: %v", err), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (server *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
-
-	switch r.Method {
-	case http.MethodOptions:
-	case http.MethodPost:
-		sr := SearchRequest{}
-		if err := json.NewDecoder(r.Body).Decode(&sr); err != nil {
-			log.Printf("json decode failed: %v", err)
-			http.Error(w, fmt.Sprintf("json decode failed: %v", err), http.StatusBadRequest)
-			return
-		}
-
-		resp := server.executeSearch(sr)
-
-		if server.debug {
-			j, _ := json.Marshal(resp)
-			log.Println(string(j))
-		}
-
-		if err := json.NewEncoder(w).Encode(resp); err != nil {
-			log.Printf("json encode failed: %v", err)
-			http.Error(w, fmt.Sprintf("json encode failed: %v", err), http.StatusInternalServerError)
-			return
-		}
-	default:
-		http.Error(w, "Bad method; supported OPTIONS, POST", http.StatusBadRequest)
+	sr := SearchRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&sr); err != nil {
+		log.Printf("json decode failed: %v", err)
+		http.Error(w, fmt.Sprintf("json decode failed: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	duration := time.Now().Sub(start)
-	log.Printf("%v %v (took %s)", r.Method, r.URL.Path, duration.String())
+	resp := server.executeSearch(sr)
+
+	if server.debug {
+		j, _ := json.Marshal(resp)
+		log.Println(string(j))
+	}
+
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		log.Printf("json encode failed: %v", err)
+		http.Error(w, fmt.Sprintf("json encode failed: %v", err), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (server *Server) flattenEntities(result *[]Entity, entities []Entity, parent string) {
@@ -216,37 +165,25 @@ func (server *Server) executeSearch(sr SearchRequest) []SearchResponse {
 }
 
 func (server *Server) queryHandler(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
-
-	switch r.Method {
-	case http.MethodOptions:
-	case http.MethodPost:
-		qr := QueryRequest{}
-		if err := json.NewDecoder(r.Body).Decode(&qr); err != nil {
-			log.Printf("json decode failed: %v", err)
-			http.Error(w, fmt.Sprintf("json decode failed: %v", err), http.StatusBadRequest)
-			return
-		}
-
-		resp := server.executeQuery(qr)
-
-		if server.debug {
-			j, _ := json.Marshal(resp)
-			log.Println(string(j))
-		}
-
-		if err := json.NewEncoder(w).Encode(resp); err != nil {
-			log.Printf("json encode failed: %v", err)
-			http.Error(w, fmt.Sprintf("json encode failed: %v", err), http.StatusInternalServerError)
-			return
-		}
-	default:
-		http.Error(w, "Bad method; supported OPTIONS, POST", http.StatusBadRequest)
+	qr := QueryRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&qr); err != nil {
+		log.Printf("json decode failed: %v", err)
+		http.Error(w, fmt.Sprintf("json decode failed: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	duration := time.Now().Sub(start)
-	log.Printf("%v %v (took %s)", r.Method, r.URL.Path, duration.String())
+	resp := server.executeQuery(qr)
+
+	if server.debug {
+		j, _ := json.Marshal(resp)
+		log.Println(string(j))
+	}
+
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		log.Printf("json encode failed: %v", err)
+		http.Error(w, fmt.Sprintf("json encode failed: %v", err), http.StatusInternalServerError)
+		return
+	}
 }
 
 func roundTimestampMS(ts int64, group string) int64 {

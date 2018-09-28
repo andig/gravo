@@ -61,7 +61,6 @@ func (api *Api) validate() {
 
 func (api *Api) get(endpoint string) (*http.Response, error) {
 	url := api.url + endpoint
-	log.Printf("GET %s", url)
 
 	start := time.Now()
 	req, err := http.NewRequest("GET", url, nil)
@@ -76,7 +75,7 @@ func (api *Api) get(endpoint string) (*http.Response, error) {
 		return nil, err
 	}
 	duration := time.Now().Sub(start)
-	log.Printf("GET %s (took %s)", url, duration.String())
+	log.Printf("GET %s (%dms)", url, duration.Nanoseconds()/1e6)
 
 	if api.debug {
 		body, err := ioutil.ReadAll(resp.Body)
