@@ -58,7 +58,11 @@ func logger(f http.HandlerFunc, debug bool) http.HandlerFunc {
 
 // handler builds inbound request processing stack
 func handler(f http.HandlerFunc, debug bool) http.HandlerFunc {
-	f = logger(f, debug)
-	f = allowed(f, http.MethodOptions, http.MethodPost)
-	return cors(f)
+	return cors(
+		allowed(
+			logger(
+				f,
+				debug),
+			http.MethodOptions, http.MethodPost),
+	)
 }
