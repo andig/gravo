@@ -27,6 +27,7 @@ type AnnotationResponse struct {
 	Text string `json:"text"`
 }
 
+// RelativeRange specifies the time range relative to "now"
 type RelativeRange struct {
 	From string `json:"from"`
 	To   string `json:"to"`
@@ -70,7 +71,7 @@ type QueryRequest struct {
 	Range         Range         `json:"range"`
 	RangeRaw      RelativeRange `json:"rangeRaw"`
 	Interval      string        `json:"interval"`
-	IntervalMs    int           `json:"intervalMs"`
+	IntervalMs    int64         `json:"intervalMs"`
 	Targets       []Target      `json:"targets"`
 	AdhocFilters  []Filter      `json:"adhocFilters"`
 	Format        string        `json:"json"`
@@ -83,11 +84,13 @@ type QueryResponse struct {
 	Datapoints []ResponseTuple `json:"datapoints"`
 }
 
+// ResponseTuple is a single data point as Grafana understands
 type ResponseTuple struct {
 	Value     float32
 	Timestamp int64
 }
 
+// MarshalJSON converts ResponseTuple to json
 func (t *ResponseTuple) MarshalJSON() ([]byte, error) {
 	a := []interface{}{
 		t.Value,
