@@ -74,6 +74,8 @@ func (api *Api) get(endpoint string) (*http.Response, error) {
 		log.Print(err)
 		return nil, err
 	}
+	defer resp.Body.Close() // close body after checking for error
+
 	duration := time.Now().Sub(start)
 	log.Printf("GET %s (%dms)", url, duration.Nanoseconds()/1e6)
 
