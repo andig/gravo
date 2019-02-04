@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -34,8 +35,17 @@ func detectApiEndpoint(url string) string {
 	log.Println("Validating API endpoint")
 
 	resp, err := http.Get(url + probe)
-	if err == nil && resp.StatusCode == 200 {
-		log.Println("API endpoint validated")
+	if err == nil {
+		resp.Body.Close() // close body after checking for error
+
+		if resp.StatusCode == 200 {
+			log.Println("API endpoint validated")
+			return url
+		}
+	}
+
+	if strings.HasSuffix(url, "/middleware.php") {
+		log.Println("API endpoint not responding. Will keep retrying using configured uri")
 		return url
 	}
 
@@ -44,9 +54,13 @@ func detectApiEndpoint(url string) string {
 	log.Println("API endpoint not responding. Trying " + detectedURL)
 
 	resp, err = http.Get(detectedURL + probe)
-	if err == nil && resp.StatusCode == 200 {
-		log.Println("API endpoint detected, using " + detectedURL)
-		return detectedURL
+	if err == nil {
+		resp.Body.Close() // close body after checking for error
+
+		if resp.StatusCode == 200 {
+			log.Println("API endpoint detected, using " + detectedURL)
+			return detectedURL
+		}
 	}
 
 	log.Println("API endpoint still not responding. Will keep retrying using configured uri")
@@ -59,7 +73,7 @@ func (api *Api) validate() {
 	log.Fatal(resp)
 }
 
-func (api *Api) get(endpoint string) (*http.Response, error) {
+func (api *Api) get(endpoint string) (io.Reader, error) {
 	url := api.url + endpoint
 
 	start := time.Now()
@@ -79,16 +93,17 @@ func (api *Api) get(endpoint string) (*http.Response, error) {
 	duration := time.Now().Sub(start)
 	log.Printf("GET %s (%dms)", url, duration.Nanoseconds()/1e6)
 
+	// read body
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Print(err)
+	}
+
 	if api.debug {
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Print(err)
-		}
-		resp.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 		log.Print(string(body))
 	}
 
-	return resp, nil
+	return bytes.NewReader(body), nil
 }
 
 func (api *Api) getEntities() []Entity {
@@ -98,7 +113,7 @@ func (api *Api) getEntities() []Entity {
 	}
 
 	er := EntityResponse{}
-	if err := json.NewDecoder(r.Body).Decode(&er); err != nil {
+	if err := json.NewDecoder(r).Decode(&er); err != nil {
 		log.Printf("json decode failed: %v", err)
 		return []Entity{}
 	}
@@ -151,7 +166,7 @@ func (api *Api) getData(uuid string, from time.Time, to time.Time, group string,
 	}
 
 	dr := DataResponse{}
-	if err := json.NewDecoder(r.Body).Decode(&dr); err != nil {
+	if err := json.NewDecoder(r).Decode(&dr); err != nil {
 		log.Printf("json decode failed: %v", err)
 		return []Tuple{}
 	}
@@ -168,7 +183,7 @@ func (api *Api) getPrognosis(uuid string, period string) PrognosisStruct {
 	}
 
 	pr := PrognosisResponse{}
-	if err := json.NewDecoder(r.Body).Decode(&pr); err != nil {
+	if err := json.NewDecoder(r).Decode(&pr); err != nil {
 		log.Printf("json decode failed: %v", err)
 		return PrognosisStruct{}
 	}
