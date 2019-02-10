@@ -5,7 +5,8 @@ gravo - Grafana for Volkszaehler - is an adapter for using [Grafana](https://gra
 
 While it is possible to run Grafana against the Volkszaehler database directly using the Grafana MySQL datasource, gravo supports additional features:
 
-  - metrics discovery: all public channels are discoverable via the Grafana UI
+  - metrics discovery: all public channels are discoverable via the Grafana UI, private channels can also be used by adding them via their UUID
+  - custom channel name: you can change the channels name for Grafana
   - performance: using Volkszaehler data aggregation gravo can achieve sub-second query times even when retrieving multiple years of data similar to the native Volkszaehler UI
 
 
@@ -25,7 +26,13 @@ While it is possible to run Grafana against the Volkszaehler database directly u
 
       ![Datasource](https://github.com/andig/gravo/blob/master/doc/datasource.png)
 
-  5. start creating dashboards and panels
+  5. start creating dashboards and panels:
+  
+      5.1 for metric you can use the channel name if the channel is public or the channel UUID.
+      
+      5.2 optional: If you use the UUID it's recommended to change the target name by adding the following line to "Additional JSON Data":
+
+          {"name": "Channel Name"}
 
       Example:
 
