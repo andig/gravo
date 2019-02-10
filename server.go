@@ -199,6 +199,10 @@ func (server *Server) executeQuery(qr QueryRequest) []QueryResponse {
 				qres.Target = text
 			}
 
+			if name, ok := target.Data["name"]; ok {
+				qres.Target = name
+			}
+
 			res[idx] = qres
 			wg.Done()
 		}(idx, target)
