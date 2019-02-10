@@ -28,7 +28,7 @@ While it is possible to run Grafana against the Volkszaehler database directly u
 
   5. start creating dashboards and panels:
   
-      5.1 for metric you can use the channelname if the channel is public or the channel UUID.
+      5.1 for metric you can use the channel name if the channel is public or the channel UUID.
       
       5.2 optional: If you use the UUID it's recommended to change the target name by adding the following line to "Additional JSON Data":
 
