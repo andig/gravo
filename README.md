@@ -14,7 +14,11 @@ While it is possible to run Grafana against the Volkszaehler database directly u
 
   1. have a working installation of [Volkszaehler](https://github.com/volkszaehler/volkszaehler.org)
   2. install Grafana and the [JSON Datasource](https://github.com/simPod/grafana-json-datasource) plugin. [Simple JSON Datasource](https://github.com/grafana/simple-json-datasource) will also work but not allow you to specify additional query parameters.
-  3. install and run gravo
+  3. build the application
+          
+          make
+          
+  3. run gravo
 
           gravo -api http://myserver/middleware.php -port 8001 
 
