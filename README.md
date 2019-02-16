@@ -38,6 +38,16 @@ While it is possible to run Grafana against the Volkszaehler database directly u
 
           {"name": "Channel Name"}
 
+      5.3 optional: to generate summary bar charts you can aggregate data for each hour, day or month by adding one of the following line to "Additional JSON Data":
+
+          {"group": "hour"}
+          {"group": "day"}
+          {"group": "month"}
+          
+      5.4 optional: options can be forwarded to the vz middleware, e.g. "raw" to provide the raw data from the database (i.e. no pulse to power convertion) by the following line to "Additional JSON Data":
+      
+          {"options": "raw"}          
+
       Example:
 
        ![Panel](https://github.com/andig/gravo/blob/master/doc/panel.png)
