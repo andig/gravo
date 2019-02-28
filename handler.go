@@ -82,6 +82,6 @@ func handler(f http.HandlerFunc, debug bool) http.HandlerFunc {
 			logger(
 				f,
 				debug),
-			http.MethodOptions, http.MethodPost),
+			http.MethodGet, http.MethodOptions, http.MethodPost),
 	)
 }
