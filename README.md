@@ -20,7 +20,7 @@ While it is possible to run Grafana against the Volkszaehler database directly u
           
   3. run gravo
 
-          gravo -api http://myserver/middleware.php -port 8001 
+          gravo -api http://myserver/middleware.php -url 0.0.0.0:8001 
 
   4. now create a simple json datasource and point it to gravo running on machine and port chosen before:
 

@@ -10,7 +10,7 @@ import (
 
 var apiURL = flag.String("api", "https://demo.volkszaehler.org/middleware.php", "volkszaehler api url")
 var apiTimeout = flag.Duration("timeout", 30*time.Second, "volkszaehler api request timeout")
-var url = flag.String("url", "0.0.0.0:8000", "listning address")
+var url = flag.String("url", "0.0.0.0:8000", "listening address")
 var verbose = flag.Bool("verbose", false, "verbose logging")
 var help = flag.Bool("help", false, "help")
 
