@@ -5,55 +5,74 @@ gravo - Grafana for Volkszaehler - is an adapter for using [Grafana](https://gra
 
 While it is possible to run Grafana against the Volkszaehler database directly using the Grafana MySQL datasource, gravo supports additional features:
 
-  - metrics discovery: all public channels are discoverable via the Grafana UI, private channels can also be used by adding them via their UUID
-  - custom channel name: you can change the channels name for Grafana
-  - performance: using Volkszaehler data aggregation gravo can achieve sub-second query times even when retrieving multiple years of data similar to the native Volkszaehler UI
+- metrics discovery: all public channels are discoverable via the Grafana UI, private channels can also be used by adding them via their UUID
+- custom channel name: you can change the channels name for Grafana
+- performance: using Volkszaehler data aggregation gravo can achieve sub-second query times even when retrieving multiple years of data similar to the native Volkszaehler UI
 
+
+## Installation
+
+### Prerequisites
+
+  1. Install [Volkszaehler](https://github.com/volkszaehler/volkszaehler.org)
+
+  2. Install Grafana and the [JSON Datasource](https://github.com/simPod/grafana-json-datasource) plugin. [Simple JSON Datasource](https://github.com/grafana/simple-json-datasource) will also work but not allow you to specify additional query parameters.
+
+### gravo
+
+gravo can either be run using docker or built manually:
+
+    docker run -p 8000:8000 andig/gravo -api http://myserver/middleware.php
+
+Building and running gravo manually:
+
+    make
+    gravo -api http://myserver/middleware.php -url 0.0.0.0:8000 
+
+### Grafana datasource
+
+Create a Grafana Simple JSON Datasource and point it to gravo running on machine and port chosen before:
+
+    http://gravo-host:8000
 
 ## Usage
 
-  1. have a working installation of [Volkszaehler](https://github.com/volkszaehler/volkszaehler.org)
-  2. install Grafana and the [JSON Datasource](https://github.com/simPod/grafana-json-datasource) plugin. [Simple JSON Datasource](https://github.com/grafana/simple-json-datasource) will also work but not allow you to specify additional query parameters.
-  3. build the application
-          
-          make
-          
-  3. run gravo
+To use gravo for querying Volkszaehler data. Create Grafana panels for gravo datasource and add metrics:
 
-          gravo -api http://myserver/middleware.php -url 0.0.0.0:8001 
+- metric can use the channel name if the channel is public
+- alternatively the UUID of a private channel can be used
 
-  4. now create a simple json datasource and point it to gravo running on machine and port chosen before:
+### Customization
 
-          http://gravo-host:8001
+Using the [JSON Datasource](https://github.com/simPod/grafana-json-datasource), the Volkszaehler query can further be tailored by adding "Additional JSON Data":
 
-      Example:
+- To **override the UUID with the channel name** add:
 
-      ![Datasource](https://github.com/andig/gravo/blob/master/doc/datasource.png)
+      {"name": "channel title"}
 
-  5. start creating dashboards and panels:
-  
-      5.1 for metric you can use the channel name if the channel is public or the channel UUID.
-      
-      5.2 optional: If you use the UUID it's recommended to change the target name by adding the following line to "Additional JSON Data":
+- Volkszaehler can **generate aggregated/averaged data** by time period:
 
-          {"name": "Channel Name"}
+      {"group": "hour/day/month"}
 
-      5.3 optional: to generate summary bar charts you can aggregate data for each hour, day or month by adding one of the following line to "Additional JSON Data":
+- To **improve Volkszaehler response times** gravo is able to optimize queries. In order to do so the number of expected result tuples can be specified. If not specified Volkszaehler will return data in highest resultion which can potentially be millions of records:
 
-          {"group": "hour"}
-          {"group": "day"}
-          {"group": "month"}
-          
-      5.4 optional: options can be forwarded to the vz middleware, e.g. "raw" to provide the raw data from the database (i.e. no pulse to power convertion) by the following line to "Additional JSON Data":
-      
-          {"options": "raw"}          
+      {"tuples": 500}
 
-      Example:
+  This requires active data aggreation in the Volkszaehler installation.
 
-       ![Panel](https://github.com/andig/gravo/blob/master/doc/panel.png)
+- Volkszaehler can also **return "raw", uninterpreted data** which is e.g. useful for retrieving meter reading values or meters pulses without pulse to power conversion. Use the following to return daily consumption values:
 
-## Building
+      {"options": "raw"}
 
-To build for your platform:
+- `"options"` can also be used to **send other options** that the Volkszaehler middleware accepts. One example is retrieving consumption data per period:
 
-    go build -o gravo *.go
+      {
+          "group": "day",
+          "options": "raw"
+      }
+
+### Example
+
+Below is an example of a complex Grafana dashboard for Volksaehler:
+
+  ![Panel](https://github.com/andig/gravo/blob/master/doc/dashboard.png)

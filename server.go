@@ -182,12 +182,8 @@ func (server *Server) executeQuery(qr QueryRequest) []QueryResponse {
 		wg.Add(1)
 
 		go func(idx int, target Target) {
-			var context string
-			if target.Data.Context != "" {
-				context = strings.ToLower(target.Data.Context)
-			}
-
 			var qres QueryResponse
+			context := strings.ToLower(target.Data.Context)
 			if context == "prognosis" {
 				qres = server.queryPrognosis(target)
 			} else {
