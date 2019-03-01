@@ -183,8 +183,8 @@ func (server *Server) executeQuery(qr QueryRequest) []QueryResponse {
 
 		go func(idx int, target Target) {
 			var context string
-			if ctx, ok := target.Data["context"]; ok {
-				context = strings.ToLower(ctx)
+			if target.Data.Context != "" {
+				context = strings.ToLower(target.Data.Context)
 			}
 
 			var qres QueryResponse
@@ -199,8 +199,8 @@ func (server *Server) executeQuery(qr QueryRequest) []QueryResponse {
 				qres.Target = text
 			}
 
-			if name, ok := target.Data["name"]; ok {
-				qres.Target = name
+			if target.Data.Name != "" {
+				qres.Target = target.Data.Name
 			}
 
 			res[idx] = qres
@@ -219,12 +219,11 @@ func (server *Server) queryData(target Target, qr *QueryRequest) QueryResponse {
 	}
 
 	var group, options string
-	data := target.Data
-	if grp, ok := data["group"]; ok {
-		group = strings.ToLower(grp)
+	if target.Data.Group != "" {
+		group = strings.ToLower(target.Data.Group)
 	}
-	if opt, ok := data["options"]; ok {
-		options = strings.ToLower(opt)
+	if target.Data.Options != "" {
+		options = strings.ToLower(target.Data.Options)
 	}
 
 	tuples := server.api.getData(
@@ -255,8 +254,8 @@ func (server *Server) queryPrognosis(target Target) QueryResponse {
 		Datapoints: []ResponseTuple{},
 	}
 
-	if period, ok := target.Data["period"]; ok {
-		pr := server.api.getPrognosis(target.Target, period)
+	if target.Data.Period != "" {
+		pr := server.api.getPrognosis(target.Target, target.Data.Period)
 
 		qres.Datapoints = append(qres.Datapoints, ResponseTuple{
 			Value:     pr.Consumption,

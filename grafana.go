@@ -107,7 +107,14 @@ type Target struct {
 	Data   TargetData `json:"data,omitempty"`
 }
 
-type TargetData map[string]string
+type TargetData struct {
+	Context string `json:"context"`
+	Group   string `json:"group"`
+	Options string `json:"options"`
+	Name    string `json:"name"`
+	Period  string `json:"period"`
+	Tuples  int64  `json:"tuples"`
+}
 
 // Filter is a compontent of adhoc filters
 type Filter struct {
