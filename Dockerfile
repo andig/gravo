@@ -38,5 +38,7 @@ COPY --from=builder /go/bin/gravo /go/bin/gravo
 # Use an unprivileged user.
 USER appuser
 
+EXPOSE 8000
+
 # Run the binary.
 ENTRYPOINT ["/go/bin/gravo"]
