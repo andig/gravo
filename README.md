@@ -68,9 +68,11 @@ Using the [JSON Datasource](https://github.com/simPod/grafana-json-datasource), 
 
       {
           "group": "day",
-          "options": "raw"
+          "options": "consumption"
       }
 
+  Note: consumption data requires volkszaehler next (andig/volkszaehler.org)
+  
 ### Example
 
 Below is an example of a complex Grafana dashboard for Volksaehler:
