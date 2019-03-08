@@ -78,3 +78,5 @@ Using the [JSON Datasource](https://github.com/simPod/grafana-json-datasource), 
 Below is an example of a complex Grafana dashboard for Volksaehler:
 
   ![Panel](https://github.com/andig/gravo/blob/master/doc/dashboard.png)
+
+See [json](https://github.com/andig/gravo/blob/master/doc/dashboard.json) for the example dashboard source.
