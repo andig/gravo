@@ -90,7 +90,7 @@ func (api *Api) get(endpoint string) (io.Reader, error) {
 	}
 	defer resp.Body.Close() // close body after checking for error
 
-	duration := time.Now().Sub(start)
+	duration := time.Since(start)
 	log.Printf("GET %s (%dms)", url, duration.Nanoseconds()/1e6)
 
 	// read body

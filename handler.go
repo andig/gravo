@@ -51,7 +51,7 @@ func logger(f http.HandlerFunc, debug bool) http.HandlerFunc {
 
 		f(w, r)
 
-		duration := time.Now().Sub(start)
+		duration := time.Since(start)
 		log.Printf("%v %v (%dms)", r.Method, r.URL.Path, duration.Nanoseconds()/1e6)
 
 		if debug {
