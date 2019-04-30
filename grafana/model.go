@@ -1,4 +1,4 @@
-package main
+package grafana
 
 import (
 	"encoding/json"
@@ -107,6 +107,7 @@ type Target struct {
 	Data   TargetData `json:"data,omitempty"`
 }
 
+// TargetData describes the query target details
 type TargetData struct {
 	Context string `json:"context"`
 	Group   string `json:"group"`

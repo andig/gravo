@@ -1,4 +1,4 @@
-package main
+package volkszaehler
 
 import (
 	"bytes"
@@ -12,15 +12,23 @@ import (
 	"time"
 )
 
-type Api struct {
+type Client interface {
+	QueryPublicEntities() []Entity
+	QueryData(uuid string, from time.Time, to time.Time, group string, options string, tuples int) []Tuple
+	QueryPrognosis(uuid string, period string) Prognosis
+}
+
+// Client is the volkszaehler API client
+type client struct {
 	url    string
 	client http.Client
 	debug  bool
 }
 
-func newAPI(url string, timeout *time.Duration, debug bool) *Api {
-	return &Api{
-		url: detectApiEndpoint(url),
+// NewClient creates new volkszaehler api client
+func NewClient(url string, timeout *time.Duration, debug bool) Client {
+	return &client{
+		url: detectAPIEndpoint(url),
 		client: http.Client{
 			Timeout: *timeout,
 		},
@@ -28,7 +36,7 @@ func newAPI(url string, timeout *time.Duration, debug bool) *Api {
 	}
 }
 
-func detectApiEndpoint(url string) string {
+func detectAPIEndpoint(url string) string {
 	const probe = "/entity.json"
 
 	url = strings.TrimRight(url, "/")
@@ -36,7 +44,7 @@ func detectApiEndpoint(url string) string {
 
 	resp, err := http.Get(url + probe)
 	if err == nil {
-		resp.Body.Close() // close body after checking for error
+		_ = resp.Body.Close() // close body after checking for error
 
 		if resp.StatusCode == 200 {
 			log.Println("API endpoint validated")
@@ -55,7 +63,7 @@ func detectApiEndpoint(url string) string {
 
 	resp, err = http.Get(detectedURL + probe)
 	if err == nil {
-		resp.Body.Close() // close body after checking for error
+		_ = resp.Body.Close() // close body after checking for error
 
 		if resp.StatusCode == 200 {
 			log.Println("API endpoint detected, using " + detectedURL)
@@ -67,13 +75,7 @@ func detectApiEndpoint(url string) string {
 	return url
 }
 
-func (api *Api) validate() {
-	resp, err := http.Get(api.url)
-	log.Println(err)
-	log.Fatal(resp)
-}
-
-func (api *Api) get(endpoint string) (io.Reader, error) {
+func (api *client) get(endpoint string) (io.Reader, error) {
 	url := api.url + endpoint
 
 	start := time.Now()
@@ -88,7 +90,9 @@ func (api *Api) get(endpoint string) (io.Reader, error) {
 		log.Print(err)
 		return nil, err
 	}
-	defer resp.Body.Close() // close body after checking for error
+	defer func() {
+		_ = resp.Body.Close() // close body after checking for error
+	}()
 
 	duration := time.Since(start)
 	log.Printf("GET %s (%dms)", url, duration.Nanoseconds()/1e6)
@@ -106,7 +110,8 @@ func (api *Api) get(endpoint string) (io.Reader, error) {
 	return bytes.NewReader(body), nil
 }
 
-func (api *Api) getEntities() []Entity {
+// QueryPublicEntities retrieves public entities from middleware
+func (api *client) QueryPublicEntities() []Entity {
 	r, err := api.get("/entity.json")
 	if err != nil {
 		return []Entity{}
@@ -121,35 +126,14 @@ func (api *Api) getEntities() []Entity {
 	return er.Entities
 }
 
-func getGroup(d int64) string {
-	if d > 3600*24*365 {
-		return "year"
-	} else if d > 3600*24*30 {
-		return "month"
-	} else if d > 3600*24*7 {
-		return "week"
-	} else if d > 3600*24 {
-		return "day"
-	} else if d > 3600 {
-		return "hour"
-	} else if d > 60 {
-		return "minute"
-	}
-	return ""
-}
-
-func (api *Api) getData(uuid string, from time.Time, to time.Time, group string, options string, tuples int) []Tuple {
+// QueryData retrieves data for specified timeframe and parameters
+func (api *client) QueryData(uuid string, from time.Time, to time.Time, group string, options string, tuples int) []Tuple {
 	f := from.Unix()
 	t := to.Unix()
 	url := fmt.Sprintf("/data/%s.json?from=%d&to=%d", uuid, f*1000, t*1000)
 
 	if tuples > 0 {
 		url += fmt.Sprintf("&tuples=%d", tuples)
-
-		if group == "" {
-			period := (t - f) / int64(tuples)
-			group = getGroup(period)
-		}
 	}
 
 	if group != "" {
@@ -160,13 +144,13 @@ func (api *Api) getData(uuid string, from time.Time, to time.Time, group string,
 		url += "&options=" + options
 	}
 
-	r, err := api.get(url)
+	reader, err := api.get(url)
 	if err != nil {
 		return []Tuple{}
 	}
 
 	dr := DataResponse{}
-	if err := json.NewDecoder(r).Decode(&dr); err != nil {
+	if err := json.NewDecoder(reader).Decode(&dr); err != nil {
 		log.Printf("json decode failed: %v", err)
 		return []Tuple{}
 	}
@@ -174,18 +158,19 @@ func (api *Api) getData(uuid string, from time.Time, to time.Time, group string,
 	return dr.Data.Tuples
 }
 
-func (api *Api) getPrognosis(uuid string, period string) PrognosisStruct {
+// QueryPrognosis retrieves prognosis from middleware
+func (api *client) QueryPrognosis(uuid string, period string) Prognosis {
 	url := fmt.Sprintf("/prognosis/%s.json?period=%s", uuid, period)
 
 	r, err := api.get(url)
 	if err != nil {
-		return PrognosisStruct{}
+		return Prognosis{}
 	}
 
 	pr := PrognosisResponse{}
 	if err := json.NewDecoder(r).Decode(&pr); err != nil {
 		log.Printf("json decode failed: %v", err)
-		return PrognosisStruct{}
+		return Prognosis{}
 	}
 
 	return pr.Prognosis

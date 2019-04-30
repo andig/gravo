@@ -6,6 +6,13 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/andig/gravo/volkszaehler"
+)
+
+var (
+	version = "development"
+	commit  = "unknown commit"
 )
 
 var apiURL = flag.String("api", "https://demo.volkszaehler.org/middleware.php", "volkszaehler api url")
@@ -15,6 +22,8 @@ var verbose = flag.Bool("verbose", false, "verbose logging")
 var help = flag.Bool("help", false, "help")
 
 func main() {
+	log.Printf("Running gravo %s (%s)", version, commit)
+
 	flag.Parse()
 
 	if *help {
@@ -22,8 +31,8 @@ func main() {
 		os.Exit(0)
 	}
 
-	api := newAPI(*apiURL, apiTimeout, *verbose)
-	server := newServer(api)
+	client := volkszaehler.NewClient(*apiURL, apiTimeout, *verbose)
+	server := newServer(client)
 
 	http.HandleFunc("/", handler(server.rootHandler, *verbose))
 	http.HandleFunc("/query", handler(server.queryHandler, *verbose))

@@ -8,15 +8,18 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/andig/gravo/grafana"
+	"github.com/andig/gravo/volkszaehler"
 )
 
 // Server is the http endpoint used by Grafana's SimpleJson plugin
 type Server struct {
-	api         *Api
+	api         volkszaehler.Client
 	entityCache map[string]string
 }
 
-func newServer(api *Api) *Server {
+func newServer(api volkszaehler.Client) *Server {
 	server := &Server{
 		api:         api,
 		entityCache: make(map[string]string),
@@ -33,13 +36,13 @@ func (server *Server) rootHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (server *Server) annotationsHandler(w http.ResponseWriter, r *http.Request) {
-	ar := AnnotationsRequest{}
+	ar := grafana.AnnotationsRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&ar); err != nil {
 		http.Error(w, fmt.Sprintf("json decode failed: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	resp := []AnnotationResponse{}
+	resp := []grafana.AnnotationResponse{}
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		log.Printf("json encode failed: %v", err)
@@ -49,13 +52,10 @@ func (server *Server) annotationsHandler(w http.ResponseWriter, r *http.Request)
 }
 
 func (server *Server) tagKeysHandler(w http.ResponseWriter, r *http.Request) {
-	resp := []TagKeyResponse{
-		TagKeyResponse{
+	resp := []grafana.TagKeyResponse{
+		grafana.TagKeyResponse{
 			Type: "string",
 			Text: "group"},
-		// TagKeyResponse{
-		// 	Type: "string",
-		// 	Text: "mode"}
 	}
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
@@ -66,9 +66,9 @@ func (server *Server) tagKeysHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (server *Server) tagValuesHandler(w http.ResponseWriter, r *http.Request) {
-	resp := []TagValueResponse{
-		TagValueResponse{"Current"},
-		TagValueResponse{"Consumption"},
+	resp := []grafana.TagValueResponse{
+		grafana.TagValueResponse{Text: "Current"},
+		grafana.TagValueResponse{Text: "Consumption"},
 	}
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
@@ -79,14 +79,14 @@ func (server *Server) tagValuesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (server *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
-	sr := SearchRequest{}
+	sr := grafana.SearchRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&sr); err != nil {
 		log.Printf("json decode failed: %v", err)
 		http.Error(w, fmt.Sprintf("json decode failed: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	resp := server.executeSearch(sr)
+	resp := server.executeSearch()
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		log.Printf("json encode failed: %v", err)
@@ -95,7 +95,7 @@ func (server *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (server *Server) flattenEntities(result *[]Entity, entities []Entity, parent string) {
+func (server *Server) flattenEntities(result *[]volkszaehler.Entity, entities []volkszaehler.Entity, parent string) {
 	for _, entity := range entities {
 		if entity.Type == "group" {
 			server.flattenEntities(result, entity.Children, entity.Title)
@@ -108,7 +108,7 @@ func (server *Server) flattenEntities(result *[]Entity, entities []Entity, paren
 	}
 }
 
-func (server *Server) populateCache(entities []Entity) {
+func (server *Server) populateCache(entities []volkszaehler.Entity) {
 	if len(entities) > 0 {
 		server.entityCache = make(map[string]string)
 	}
@@ -121,19 +121,19 @@ func (server *Server) populateCache(entities []Entity) {
 	}
 }
 
-func (server *Server) getPublicEntites() []Entity {
-	entities := make([]Entity, 0)
-	server.flattenEntities(&entities, server.api.getEntities(), "")
+func (server *Server) getPublicEntites() []volkszaehler.Entity {
+	entities := make([]volkszaehler.Entity, 0)
+	server.flattenEntities(&entities, server.api.QueryPublicEntities(), "")
 	server.populateCache(entities)
 	return entities
 }
 
-func (server *Server) executeSearch(sr SearchRequest) []SearchResponse {
+func (server *Server) executeSearch() []grafana.SearchResponse {
 	entities := server.getPublicEntites()
 
-	res := []SearchResponse{}
+	res := []grafana.SearchResponse{}
 	for _, entity := range entities {
-		res = append(res, SearchResponse{
+		res = append(res, grafana.SearchResponse{
 			Text: entity.Title,
 			UUID: entity.UUID,
 		})
@@ -143,7 +143,7 @@ func (server *Server) executeSearch(sr SearchRequest) []SearchResponse {
 }
 
 func (server *Server) queryHandler(w http.ResponseWriter, r *http.Request) {
-	qr := QueryRequest{}
+	qr := grafana.QueryRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&qr); err != nil {
 		log.Printf("json decode failed: %v", err)
 		http.Error(w, fmt.Sprintf("json decode failed: %v", err), http.StatusBadRequest)
@@ -174,15 +174,15 @@ func roundTimestampMS(ts int64, group string) int64 {
 	return t.Unix() * 1000
 }
 
-func (server *Server) executeQuery(qr QueryRequest) []QueryResponse {
-	res := make([]QueryResponse, len(qr.Targets))
+func (server *Server) executeQuery(qr grafana.QueryRequest) []grafana.QueryResponse {
+	res := make([]grafana.QueryResponse, len(qr.Targets))
 	wg := &sync.WaitGroup{}
 
 	for idx, target := range qr.Targets {
 		wg.Add(1)
 
-		go func(idx int, target Target) {
-			var qres QueryResponse
+		go func(idx int, target grafana.Target) {
+			var qres grafana.QueryResponse
 			context := strings.ToLower(target.Data.Context)
 			if context == "prognosis" {
 				qres = server.queryPrognosis(target)
@@ -208,10 +208,10 @@ func (server *Server) executeQuery(qr QueryRequest) []QueryResponse {
 	return res
 }
 
-func (server *Server) queryData(target Target, qr *QueryRequest) QueryResponse {
-	qres := QueryResponse{
+func (server *Server) queryData(target grafana.Target, qr *grafana.QueryRequest) grafana.QueryResponse {
+	qres := grafana.QueryResponse{
 		Target:     target.Target,
-		Datapoints: []ResponseTuple{},
+		Datapoints: []grafana.ResponseTuple{},
 	}
 
 	var group, options string
@@ -222,7 +222,7 @@ func (server *Server) queryData(target Target, qr *QueryRequest) QueryResponse {
 		options = strings.ToLower(target.Data.Options)
 	}
 
-	tuples := server.api.getData(
+	tuples := server.api.QueryData(
 		target.Target,
 		qr.Range.From,
 		qr.Range.To,
@@ -235,7 +235,7 @@ func (server *Server) queryData(target Target, qr *QueryRequest) QueryResponse {
 			tuple.Timestamp = roundTimestampMS(tuple.Timestamp, group)
 		}
 
-		qres.Datapoints = append(qres.Datapoints, ResponseTuple{
+		qres.Datapoints = append(qres.Datapoints, grafana.ResponseTuple{
 			Timestamp: tuple.Timestamp,
 			Value:     tuple.Value,
 		})
@@ -244,16 +244,16 @@ func (server *Server) queryData(target Target, qr *QueryRequest) QueryResponse {
 	return qres
 }
 
-func (server *Server) queryPrognosis(target Target) QueryResponse {
-	qres := QueryResponse{
+func (server *Server) queryPrognosis(target grafana.Target) grafana.QueryResponse {
+	qres := grafana.QueryResponse{
 		Target:     target.Target,
-		Datapoints: []ResponseTuple{},
+		Datapoints: []grafana.ResponseTuple{},
 	}
 
 	if target.Data.Period != "" {
-		pr := server.api.getPrognosis(target.Target, target.Data.Period)
+		pr := server.api.QueryPrognosis(target.Target, target.Data.Period)
 
-		qres.Datapoints = append(qres.Datapoints, ResponseTuple{
+		qres.Datapoints = append(qres.Datapoints, grafana.ResponseTuple{
 			Value:     pr.Consumption,
 			Timestamp: time.Now().Unix(),
 		})

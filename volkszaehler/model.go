@@ -1,12 +1,14 @@
-package main
+package volkszaehler
 
 import "encoding/json"
 
+// EntityResponse is the middleware response to /entity.json
 type EntityResponse struct {
 	Version  string   `json:"version"`
 	Entities []Entity `json:"entities"`
 }
 
+// Entity is a single middleware entity
 type Entity struct {
 	UUID     string   `json:"uuid"`
 	Type     string   `json:"type"`
@@ -14,27 +16,30 @@ type Entity struct {
 	Children []Entity `json:"children"`
 }
 
+// DataResponse is the middleware response to /data.json
 type DataResponse struct {
 	Version string      `json:"version"`
-	Data    DataStruct  `json:"data"`
+	Data    Data        `json:"data"`
 	Debug   interface{} `json:"debug"`
 }
 
-type DataStruct struct {
+// Data holds the array of middleware tuples
+type Data struct {
 	Tuples []Tuple `json:"tuples"`
 }
 
+// Tuple is a single timestamp/value tuple
 type Tuple struct {
 	Timestamp int64
 	Value     float32
 }
 
 type PrognosisResponse struct {
-	Version   string          `json:"version"`
-	Prognosis PrognosisStruct `json:"prognosis"`
+	Version   string    `json:"version"`
+	Prognosis Prognosis `json:"prognosis"`
 }
 
-type PrognosisStruct struct {
+type Prognosis struct {
 	Consumption float32 `json:"consumption"`
 	Fator       float32 `json:"factor"`
 }
