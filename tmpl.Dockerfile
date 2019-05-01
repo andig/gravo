@@ -20,12 +20,12 @@ COPY go.* .
 RUN go mod download
 
 COPY . .
-RUN make build
+RUN GOARCH={{ .GoARCH }} GOARM={{ .GoARM }} make build
 
 #############################
 ## STEP 2 build a small image
 #############################
-FROM alpine
+FROM {{ .RuntimeImage }}
 
 # Import from builder
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo

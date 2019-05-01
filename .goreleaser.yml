@@ -1,0 +1,30 @@
+project_name: gravo
+
+builds:
+  - binary: gravo
+    ldflags:
+      - -s -w -X github.com/andig/gravo/main.version={{.Version}} -X github.com/andig/gravo/main.commit={{.ShortCommit}} -X github.com/andig/gravo/main.date={{.Date}}
+    env:
+      - GO111MODULE=on
+    goos:
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm
+      - arm64
+    goarm:
+      - 6
+
+archives:
+  - id: foo
+    name_template: '{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE
+
+#release:
+#  disable: true
