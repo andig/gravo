@@ -8,11 +8,14 @@ BUILD_DATE := $(shell date -u '+%Y-%m-%d_%H:%M:%S')
 
 default: clean checks test build
 
-test: clean
-	go test -v -cover ./...
-
 clean:
 	rm -rf dist/ cover.out
+
+checks:
+	golangci-lint run
+
+test: clean
+	go test -v -cover ./...
 
 build: clean
 	@echo Version: $(VERSION) $(BUILD_DATE)
@@ -20,8 +23,8 @@ build: clean
 
 publish-images:
 	@echo Version: $(VERSION) $(BUILD_DATE)
-	seihon publish --version="$(TAG_NAME)" --image-name andig/gravo --base-image-name alpine --dry-run=false
-	seihon publish --version="latest" --image-name andig/gravo --base-image-name alpine --dry-run=false
+	seihon publish --version="$(TAG_NAME)" --image-name andig/gravo --base-runtime-image alpine --dry-run=false
+	seihon publish --version="latest" --image-name andig/gravo --base-runtime-image alpine --dry-run=false
 
 test-release:
 	goreleaser --snapshot --skip-publish --rm-dist

@@ -127,7 +127,9 @@ func (api *client) QueryPublicEntities() []Entity {
 }
 
 // QueryData retrieves data for specified timeframe and parameters
-func (api *client) QueryData(uuid string, from time.Time, to time.Time, group string, options string, tuples int) []Tuple {
+func (api *client) QueryData(uuid string, from time.Time, to time.Time,
+	group string, options string, tuples int,
+) []Tuple {
 	f := from.Unix()
 	t := to.Unix()
 	url := fmt.Sprintf("/data/%s.json?from=%d&to=%d", uuid, f*1000, t*1000)
