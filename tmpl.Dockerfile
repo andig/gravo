@@ -16,7 +16,7 @@ RUN adduser -D -g '' appuser
 WORKDIR /go/src/github.com/andig/gravo
 
 ENV GO111MODULE on
-COPY go.* .
+COPY go.* ./
 RUN go mod download
 
 COPY . .
