@@ -26,11 +26,11 @@ type client struct {
 }
 
 // NewClient creates new volkszaehler api client
-func NewClient(url string, timeout *time.Duration, debug bool) Client {
+func NewClient(url string, timeout time.Duration, debug bool) Client {
 	return &client{
 		url: detectAPIEndpoint(url),
 		client: http.Client{
-			Timeout: *timeout,
+			Timeout: timeout,
 		},
 		debug: debug,
 	}
