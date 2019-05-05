@@ -13,7 +13,10 @@ import (
 )
 
 type Client interface {
+	Get(endpoint string) (io.Reader, error)
+	Post(endpoint string, payload string) (io.Reader, error)
 	QueryPublicEntities() []Entity
+	QueryEntity(entity string) Entity
 	QueryData(uuid string, from time.Time, to time.Time, group string, options string, tuples int) []Tuple
 	QueryPrognosis(uuid string, period string) Prognosis
 }
@@ -75,7 +78,16 @@ func detectAPIEndpoint(url string) string {
 	return url
 }
 
-func (api *client) get(endpoint string) (io.Reader, error) {
+func (api *client) debugResponseBody(resp *http.Response) {
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Print(err)
+	}
+	resp.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+	log.Print(string(body))
+}
+
+func (api *client) Get(endpoint string) (io.Reader, error) {
 	url := api.url + endpoint
 
 	start := time.Now()
@@ -97,33 +109,70 @@ func (api *client) get(endpoint string) (io.Reader, error) {
 	duration := time.Since(start)
 	log.Printf("GET %s (%dms)", url, duration.Nanoseconds()/1e6)
 
-	// read body
-	body, err := ioutil.ReadAll(resp.Body)
+	if api.debug {
+		api.debugResponseBody(resp)
+	}
+
+	return resp.Body, nil
+}
+
+func (api *client) Post(endpoint string, payload string) (io.Reader, error) {
+	url := api.url + endpoint
+
+	start := time.Now()
+	req, err := http.NewRequest("POST", url, strings.NewReader(payload))
+	if err != nil {
+		log.Fatal(err)
+	}
+	req.Header.Add("Content-type", "application/json")
+	req.Header.Add("Accept", "application/json")
+
+	resp, err := api.client.Do(req)
 	if err != nil {
 		log.Print(err)
+		return nil, err
 	}
+	duration := time.Since(start)
+	log.Printf("POST %d %s (%dms)", resp.StatusCode, url, duration.Nanoseconds()/1e6)
 
 	if api.debug {
-		log.Print(string(body))
+		api.debugResponseBody(resp)
 	}
 
-	return bytes.NewReader(body), nil
+	return resp.Body, nil
 }
 
 // QueryPublicEntities retrieves public entities from middleware
 func (api *client) QueryPublicEntities() []Entity {
-	r, err := api.get("/entity.json")
+	r, err := api.Get("/entity.json")
 	if err != nil {
 		return []Entity{}
 	}
 
-	er := EntityResponse{}
+	er := EntitiesResponse{}
 	if err := json.NewDecoder(r).Decode(&er); err != nil {
 		log.Printf("json decode failed: %v", err)
 		return []Entity{}
 	}
 
 	return er.Entities
+}
+
+// QueryEntity retrieves entitiy by uuid
+func (api *client) QueryEntity(entity string) Entity {
+	context := fmt.Sprintf("/entity/%s.json", entity)
+	r, err := api.Get(context)
+	if err != nil {
+		return Entity{}
+	}
+
+	er := EntityResponse{}
+	if err := json.NewDecoder(r).Decode(&er); err != nil {
+		log.Printf("json decode failed: %v", err)
+		return Entity{}
+	}
+
+	return er.Entity
 }
 
 // QueryData retrieves data for specified timeframe and parameters
@@ -146,7 +195,7 @@ func (api *client) QueryData(uuid string, from time.Time, to time.Time,
 		url += "&options=" + options
 	}
 
-	reader, err := api.get(url)
+	reader, err := api.Get(url)
 	if err != nil {
 		return []Tuple{}
 	}
@@ -164,7 +213,7 @@ func (api *client) QueryData(uuid string, from time.Time, to time.Time,
 func (api *client) QueryPrognosis(uuid string, period string) Prognosis {
 	url := fmt.Sprintf("/prognosis/%s.json?period=%s", uuid, period)
 
-	r, err := api.get(url)
+	r, err := api.Get(url)
 	if err != nil {
 		return Prognosis{}
 	}

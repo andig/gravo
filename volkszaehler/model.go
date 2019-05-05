@@ -2,10 +2,26 @@ package volkszaehler
 
 import "encoding/json"
 
-// EntityResponse is the middleware response to /entity.json
-type EntityResponse struct {
+// EntityType represent the entity types enum
+type EntityType string
+
+const (
+	// Channel is the Channel entity type
+	Channel EntityType = "channel"
+	// Group is the Aggregator entity type
+	Group EntityType = "group"
+)
+
+// EntitiesResponse is the middleware response to /entity.json
+type EntitiesResponse struct {
 	Version  string   `json:"version"`
 	Entities []Entity `json:"entities"`
+}
+
+// EntityResponse is the middleware response to /entity/uuid.json
+type EntityResponse struct {
+	Version string `json:"version"`
+	Entity  Entity `json:"entity"`
 }
 
 // Entity is a single middleware entity
@@ -42,6 +58,17 @@ type PrognosisResponse struct {
 type Prognosis struct {
 	Consumption float32 `json:"consumption"`
 	Fator       float32 `json:"factor"`
+}
+
+type Exception struct {
+	Type    string
+	Message string
+	Code    int
+}
+
+type ErrorResponse struct {
+	Version   string    `json:"version"`
+	Exception Exception `json:"exception"`
 }
 
 // UnmarshalJSON converts volkszaehler tuple into Tuple struct
