@@ -23,8 +23,7 @@ build: clean
 
 publish-images:
 	@echo Version: $(VERSION) $(BUILD_DATE)
-	seihon publish --version="$(TAG_NAME)" --image-name andig/gravo --base-runtime-image alpine --dry-run=false
-	seihon publish --version="latest" --image-name andig/gravo --base-runtime-image alpine --dry-run=false
+	seihon publish -v "$(TAG_NAME)" -v "latest" --image-name andig/gravo --base-runtime-image alpine --dry-run=false
 
 test-release:
 	goreleaser --snapshot --skip-publish --rm-dist
