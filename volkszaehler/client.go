@@ -3,6 +3,7 @@ package volkszaehler
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -12,13 +13,16 @@ import (
 	"time"
 )
 
+// Client is the volkszaehler API client
 type Client interface {
-	QueryPublicEntities() []Entity
-	QueryData(uuid string, from time.Time, to time.Time, group string, options string, tuples int) []Tuple
-	QueryPrognosis(uuid string, period string) Prognosis
+	Get(endpoint string) (io.ReadCloser, error)
+	Post(endpoint string, payload string) (io.ReadCloser, error)
+	QueryPublicEntities() ([]Entity, error)
+	QueryEntity(entity string) (Entity, error)
+	QueryData(uuid string, from time.Time, to time.Time, group string, options string, tuples int) ([]Tuple, error)
+	QueryPrognosis(uuid string, period string) (Prognosis, error)
 }
 
-// Client is the volkszaehler API client
 type client struct {
 	url    string
 	client http.Client
@@ -28,7 +32,7 @@ type client struct {
 // NewClient creates new volkszaehler api client
 func NewClient(url string, timeout *time.Duration, debug bool) Client {
 	return &client{
-		url: detectAPIEndpoint(url),
+		url: url,
 		client: http.Client{
 			Timeout: *timeout,
 		},
@@ -36,100 +40,121 @@ func NewClient(url string, timeout *time.Duration, debug bool) Client {
 	}
 }
 
-func detectAPIEndpoint(url string) string {
-	const probe = "/entity.json"
-
-	url = strings.TrimRight(url, "/")
-	log.Println("Validating API endpoint")
-
-	resp, err := http.Get(url + probe)
-	if err == nil {
-		_ = resp.Body.Close() // close body after checking for error
-
-		if resp.StatusCode == 200 {
-			log.Println("API endpoint validated")
-			return url
-		}
+func (api *client) debugResponseBody(resp *http.Response) error {
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
 	}
-
-	if strings.HasSuffix(url, "/middleware.php") {
-		log.Println("API endpoint not responding. Will keep retrying using configured uri")
-		return url
-	}
-
-	// append middleware.php
-	detectedURL := url + "/middleware.php"
-	log.Println("API endpoint not responding. Trying " + detectedURL)
-
-	resp, err = http.Get(detectedURL + probe)
-	if err == nil {
-		_ = resp.Body.Close() // close body after checking for error
-
-		if resp.StatusCode == 200 {
-			log.Println("API endpoint detected, using " + detectedURL)
-			return detectedURL
-		}
-	}
-
-	log.Println("API endpoint still not responding. Will keep retrying using configured uri")
-	return url
+	resp.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+	log.Print(string(body))
+	return nil
 }
 
-func (api *client) get(endpoint string) (io.Reader, error) {
+// Get returns a GET requests body or error. It is the clients responsibility
+// to close the response body in case error is not nil
+func (api *client) Get(endpoint string) (io.ReadCloser, error) {
 	url := api.url + endpoint
 
 	start := time.Now()
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	req.Header.Add("Accept", "application/json")
 
 	resp, err := api.client.Do(req)
 	if err != nil {
-		log.Print(err)
 		return nil, err
 	}
-	defer func() {
-		_ = resp.Body.Close() // close body after checking for error
-	}()
 
 	duration := time.Since(start)
 	log.Printf("GET %s (%dms)", url, duration.Nanoseconds()/1e6)
 
-	// read body
-	body, err := ioutil.ReadAll(resp.Body)
+	if api.debug {
+		if err := api.debugResponseBody(resp); err != nil {
+			return nil, err
+		}
+	}
+
+	return resp.Body, nil
+}
+
+// Post returns a GET requests body or error. It is the clients responsibility
+// to close the response body in case error is not nil
+func (api *client) Post(endpoint string, payload string) (io.ReadCloser, error) {
+	url := api.url + endpoint
+
+	req, err := http.NewRequest("POST", url, strings.NewReader(payload))
 	if err != nil {
-		log.Print(err)
+		return nil, err
+	}
+	req.Header.Add("Content-type", "application/json")
+	req.Header.Add("Accept", "application/json")
+
+	resp, err := api.client.Do(req)
+	if err != nil {
+		return nil, err
 	}
 
 	if api.debug {
-		log.Print(string(body))
+		if err := api.debugResponseBody(resp); err != nil {
+			return nil, err
+		}
 	}
 
-	return bytes.NewReader(body), nil
+	return resp.Body, nil
 }
 
 // QueryPublicEntities retrieves public entities from middleware
-func (api *client) QueryPublicEntities() []Entity {
-	r, err := api.get("/entity.json")
+func (api *client) QueryPublicEntities() ([]Entity, error) {
+	body, err := api.Get("/entity.json")
 	if err != nil {
-		return []Entity{}
+		return []Entity{}, err
 	}
+	defer func() {
+		_ = body.Close() // close body after checking for error
+	}()
+
+	er := EntitiesResponse{}
+	if err := json.NewDecoder(body).Decode(&er); err != nil {
+		log.Printf("json decode failed: %v", err)
+		return []Entity{}, err
+	}
+
+	if er.Exception.Message != "" {
+		return []Entity{}, errors.New("api exception: " + er.Exception.Message)
+	}
+
+	return er.Entities, nil
+}
+
+// QueryEntity retrieves entitiy by uuid
+func (api *client) QueryEntity(entity string) (Entity, error) {
+	context := fmt.Sprintf("/entity/%s.json", entity)
+	body, err := api.Get(context)
+	if err != nil {
+		return Entity{}, err
+	}
+	defer func() {
+		_ = body.Close() // close body after checking for error
+	}()
 
 	er := EntityResponse{}
-	if err := json.NewDecoder(r).Decode(&er); err != nil {
-		log.Printf("json decode failed: %v", err)
-		return []Entity{}
+	if err := json.NewDecoder(body).Decode(&er); err != nil {
+		return Entity{}, err
 	}
 
-	return er.Entities
+	if er.Exception.Message != "" {
+		return Entity{}, errors.New("api exception: " + er.Exception.Message)
+	}
+
+	return er.Entity, nil
 }
 
 // QueryData retrieves data for specified timeframe and parameters
 func (api *client) QueryData(uuid string, from time.Time, to time.Time,
 	group string, options string, tuples int,
-) []Tuple {
+) ([]Tuple, error) {
 	f := from.Unix()
 	t := to.Unix()
 	url := fmt.Sprintf("/data/%s.json?from=%d&to=%d", uuid, f*1000, t*1000)
@@ -146,34 +171,46 @@ func (api *client) QueryData(uuid string, from time.Time, to time.Time,
 		url += "&options=" + options
 	}
 
-	reader, err := api.get(url)
+	body, err := api.Get(url)
 	if err != nil {
-		return []Tuple{}
+		return []Tuple{}, err
 	}
+	defer func() {
+		_ = body.Close() // close body after checking for error
+	}()
 
 	dr := DataResponse{}
-	if err := json.NewDecoder(reader).Decode(&dr); err != nil {
-		log.Printf("json decode failed: %v", err)
-		return []Tuple{}
+	if err := json.NewDecoder(body).Decode(&dr); err != nil {
+		return []Tuple{}, err
 	}
 
-	return dr.Data.Tuples
+	if dr.Exception.Message != "" {
+		return []Tuple{}, errors.New("api exception: " + dr.Exception.Message)
+	}
+
+	return dr.Data.Tuples, nil
 }
 
 // QueryPrognosis retrieves prognosis from middleware
-func (api *client) QueryPrognosis(uuid string, period string) Prognosis {
+func (api *client) QueryPrognosis(uuid string, period string) (Prognosis, error) {
 	url := fmt.Sprintf("/prognosis/%s.json?period=%s", uuid, period)
 
-	r, err := api.get(url)
+	body, err := api.Get(url)
 	if err != nil {
-		return Prognosis{}
+		return Prognosis{}, err
 	}
+	defer func() {
+		_ = body.Close() // close body after checking for error
+	}()
 
 	pr := PrognosisResponse{}
-	if err := json.NewDecoder(r).Decode(&pr); err != nil {
-		log.Printf("json decode failed: %v", err)
-		return Prognosis{}
+	if err := json.NewDecoder(body).Decode(&pr); err != nil {
+		return Prognosis{}, err
 	}
 
-	return pr.Prognosis
+	if pr.Exception.Message != "" {
+		return Prognosis{}, errors.New("api exception: " + pr.Exception.Message)
+	}
+
+	return pr.Prognosis, nil
 }

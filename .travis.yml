@@ -3,7 +3,7 @@ dist: xenial
 language: go
 
 go: 
-  - 1.12
+  - "1.12"
 
 services:
   - docker
@@ -30,7 +30,7 @@ script:
 before_deploy:
   - curl -sfL https://raw.githubusercontent.com/ldez/seihon/master/godownloader.sh | bash -s -- -b $GOPATH/bin
   - seihon --version
-  - >
+  - |
     if ! [ "$BEFORE_DEPLOY_RUN" ]; then
       export BEFORE_DEPLOY_RUN=1;
       docker login -u $DOCKER_USER -p $DOCKER_PASS
@@ -42,10 +42,8 @@ deploy:
     script: curl -sL https://git.io/goreleaser | bash
     on:
       tags: true
-      condition: $TRAVIS_GO_VERSION =~ ^1\.12$
   - provider: script
     skip_cleanup: true
     script: make publish-images
     on:
       tags: true
-      condition: $TRAVIS_GO_VERSION =~ ^1\.12$

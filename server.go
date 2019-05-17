@@ -123,7 +123,14 @@ func (server *Server) populateCache(entities []volkszaehler.Entity) {
 
 func (server *Server) getPublicEntites() []volkszaehler.Entity {
 	entities := make([]volkszaehler.Entity, 0)
-	server.flattenEntities(&entities, server.api.QueryPublicEntities(), "")
+
+	publicEntities, err := server.api.QueryPublicEntities()
+	if err != nil {
+		log.Printf("api call failed: %v", err)
+		return entities
+	}
+
+	server.flattenEntities(&entities, publicEntities, "")
 	server.populateCache(entities)
 	return entities
 }
@@ -222,13 +229,18 @@ func (server *Server) queryData(target grafana.Target, qr *grafana.QueryRequest)
 		options = strings.ToLower(target.Data.Options)
 	}
 
-	tuples := server.api.QueryData(
+	tuples, err := server.api.QueryData(
 		target.Target,
 		qr.Range.From,
 		qr.Range.To,
 		group,
 		options,
-		qr.MaxDataPoints)
+		qr.MaxDataPoints,
+	)
+	if err != nil {
+		log.Printf("api call failed: %v", err)
+		return qres
+	}
 
 	for _, tuple := range tuples {
 		if group != "" {
@@ -251,7 +263,11 @@ func (server *Server) queryPrognosis(target grafana.Target) grafana.QueryRespons
 	}
 
 	if target.Data.Period != "" {
-		pr := server.api.QueryPrognosis(target.Target, target.Data.Period)
+		pr, err := server.api.QueryPrognosis(target.Target, target.Data.Period)
+		if err != nil {
+			log.Printf("api call failed: %v", err)
+			return qres
+		}
 
 		qres.Datapoints = append(qres.Datapoints, grafana.ResponseTuple{
 			Value:     pr.Consumption,

@@ -15,7 +15,7 @@ checks:
 	golangci-lint run
 
 test: clean
-	go test -v -cover ./...
+	go test ./...
 
 build: clean
 	@echo Version: $(VERSION) $(BUILD_DATE)
