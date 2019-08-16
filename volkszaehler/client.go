@@ -13,6 +13,11 @@ import (
 	"time"
 )
 
+// HTTPDoer is the http client Do() interface
+type HTTPDoer interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 // Client is the volkszaehler API client
 type Client interface {
 	Get(endpoint string) (io.ReadCloser, error)
@@ -25,18 +30,16 @@ type Client interface {
 
 type client struct {
 	url    string
-	client http.Client
+	client HTTPDoer
 	debug  bool
 }
 
 // NewClient creates new volkszaehler api client
-func NewClient(url string, timeout *time.Duration, debug bool) Client {
+func NewClient(url string, httpClient HTTPDoer, debug bool) Client {
 	return &client{
-		url: url,
-		client: http.Client{
-			Timeout: *timeout,
-		},
-		debug: debug,
+		url:    url,
+		client: httpClient,
+		debug:  debug,
 	}
 }
 

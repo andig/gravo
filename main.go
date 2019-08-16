@@ -31,7 +31,8 @@ func main() {
 		os.Exit(0)
 	}
 
-	client := volkszaehler.NewClient(*apiURL, apiTimeout, *verbose)
+	httpClient := http.Client{Timeout: *apiTimeout}
+	client := volkszaehler.NewClient(*apiURL, &httpClient, *verbose)
 	server := newServer(client)
 
 	http.HandleFunc("/", handler(server.rootHandler, *verbose))
