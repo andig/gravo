@@ -73,6 +73,13 @@ type Exception struct {
 	Code    int    `json:"code"`
 }
 
+// PostDataResponse is the middleware response to POST requests to /data.json
+type PostDataResponse struct {
+	Version   string    `json:"version"`
+	Exception Exception `json:"exception"`
+	Rows      int       `json:"rows"`
+}
+
 // UnmarshalJSON converts volkszaehler tuple into Tuple struct
 func (t *Tuple) UnmarshalJSON(b []byte) error {
 	var a []*json.RawMessage
