@@ -39,6 +39,7 @@ func (server *Server) annotationsHandler(w http.ResponseWriter, r *http.Request)
 	ar := grafana.AnnotationsRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&ar); err != nil {
 		http.Error(w, fmt.Sprintf("json decode failed: %v", err), http.StatusBadRequest)
+
 		return
 	}
 
@@ -47,6 +48,7 @@ func (server *Server) annotationsHandler(w http.ResponseWriter, r *http.Request)
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		log.Printf("json encode failed: %v", err)
 		http.Error(w, fmt.Sprintf("json encode failed: %v", err), http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -61,6 +63,7 @@ func (server *Server) tagKeysHandler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		log.Printf("json encode failed: %v", err)
 		http.Error(w, fmt.Sprintf("json encode failed: %v", err), http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -74,6 +77,7 @@ func (server *Server) tagValuesHandler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		log.Printf("json encode failed: %v", err)
 		http.Error(w, fmt.Sprintf("json encode failed: %v", err), http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -83,6 +87,7 @@ func (server *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&sr); err != nil {
 		log.Printf("json decode failed: %v", err)
 		http.Error(w, fmt.Sprintf("json decode failed: %v", err), http.StatusBadRequest)
+
 		return
 	}
 
@@ -91,6 +96,7 @@ func (server *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		log.Printf("json encode failed: %v", err)
 		http.Error(w, fmt.Sprintf("json encode failed: %v", err), http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -127,11 +133,13 @@ func (server *Server) getPublicEntites() []volkszaehler.Entity {
 	publicEntities, err := server.api.QueryPublicEntities()
 	if err != nil {
 		log.Printf("api call failed: %v", err)
+
 		return entities
 	}
 
 	server.flattenEntities(&entities, publicEntities, "")
 	server.populateCache(entities)
+
 	return entities
 }
 
@@ -154,6 +162,7 @@ func (server *Server) queryHandler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&qr); err != nil {
 		log.Printf("json decode failed: %v", err)
 		http.Error(w, fmt.Sprintf("json decode failed: %v", err), http.StatusBadRequest)
+
 		return
 	}
 
@@ -162,6 +171,7 @@ func (server *Server) queryHandler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		log.Printf("json encode failed: %v", err)
 		http.Error(w, fmt.Sprintf("json encode failed: %v", err), http.StatusInternalServerError)
+
 		return
 	}
 }
@@ -210,6 +220,7 @@ func (server *Server) executeQuery(qr grafana.QueryRequest) []grafana.QueryRespo
 			wg.Done()
 		}(idx, target)
 	}
+
 	wg.Wait()
 
 	return res
@@ -221,10 +232,12 @@ func (server *Server) queryData(target grafana.Target, qr *grafana.QueryRequest)
 		Datapoints: []grafana.ResponseTuple{},
 	}
 
-	var group, options string
+	var group string
 	if target.Data.Group != "" {
 		group = strings.ToLower(target.Data.Group)
 	}
+
+	var options string
 	if target.Data.Options != "" {
 		options = strings.ToLower(target.Data.Options)
 	}

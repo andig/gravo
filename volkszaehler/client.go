@@ -48,21 +48,24 @@ func (api *client) debugResponseBody(resp *http.Response) error {
 	if err != nil {
 		return err
 	}
+
 	resp.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 	log.Print(string(body))
+
 	return nil
 }
 
 // Get returns a GET requests body or error. It is the clients responsibility
 // to close the response body in case error is not nil
 func (api *client) Get(endpoint string) (io.ReadCloser, error) {
+	start := time.Now()
 	url := api.url + endpoint
 
-	start := time.Now()
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
+
 	req.Header.Add("Accept", "application/json")
 
 	resp, err := api.client.Do(req)
@@ -91,6 +94,7 @@ func (api *client) Post(endpoint string, payload string) (io.ReadCloser, error) 
 	if err != nil {
 		return nil, err
 	}
+
 	req.Header.Add("Content-type", "application/json")
 	req.Header.Add("Accept", "application/json")
 
@@ -114,6 +118,7 @@ func (api *client) QueryPublicEntities() ([]Entity, error) {
 	if err != nil {
 		return []Entity{}, err
 	}
+
 	defer func() {
 		_ = body.Close() // close body after checking for error
 	}()
@@ -134,10 +139,12 @@ func (api *client) QueryPublicEntities() ([]Entity, error) {
 // QueryEntity retrieves entitiy by uuid
 func (api *client) QueryEntity(entity string) (Entity, error) {
 	context := fmt.Sprintf("/entity/%s.json", entity)
+
 	body, err := api.Get(context)
 	if err != nil {
 		return Entity{}, err
 	}
+
 	defer func() {
 		_ = body.Close() // close body after checking for error
 	}()
@@ -178,6 +185,7 @@ func (api *client) QueryData(uuid string, from time.Time, to time.Time,
 	if err != nil {
 		return []Tuple{}, err
 	}
+
 	defer func() {
 		_ = body.Close() // close body after checking for error
 	}()
@@ -202,6 +210,7 @@ func (api *client) QueryPrognosis(uuid string, period string) (Prognosis, error)
 	if err != nil {
 		return Prognosis{}, err
 	}
+
 	defer func() {
 		_ = body.Close() // close body after checking for error
 	}()

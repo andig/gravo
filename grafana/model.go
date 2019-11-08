@@ -96,6 +96,7 @@ func (t *ResponseTuple) MarshalJSON() ([]byte, error) {
 		t.Value,
 		t.Timestamp,
 	}
+
 	return json.Marshal(a)
 }
 
