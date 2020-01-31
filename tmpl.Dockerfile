@@ -1,7 +1,7 @@
 ############################
 # STEP 1 build executable binary
 ############################
-FROM golang:alpine as builder
+FROM golang:1.13-alpine as builder
 
 # Install git + SSL ca certificates.
 # Git is required for fetching the dependencies.
@@ -14,10 +14,6 @@ RUN apk update \
 RUN adduser -D -g '' appuser
 
 WORKDIR /go/src/github.com/andig/gravo
-
-ENV GO111MODULE on
-COPY go.* .
-RUN go mod download
 
 COPY . .
 RUN GOARCH={{ .GoARCH }} GOARM={{ .GoARM }} make build
