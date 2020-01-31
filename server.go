@@ -16,6 +16,7 @@ import (
 // Server is the http endpoint used by Grafana's SimpleJson plugin
 type Server struct {
 	api         volkszaehler.Client
+	cacheMux    sync.Mutex // guards entityCache
 	entityCache map[string]string
 }
 
@@ -115,6 +116,9 @@ func (server *Server) flattenEntities(result *[]volkszaehler.Entity, entities []
 }
 
 func (server *Server) populateCache(entities []volkszaehler.Entity) {
+	server.cacheMux.Lock()
+	defer server.cacheMux.Unlock()
+
 	if len(entities) > 0 {
 		server.entityCache = make(map[string]string)
 	}
@@ -208,9 +212,11 @@ func (server *Server) executeQuery(qr grafana.QueryRequest) []grafana.QueryRespo
 			}
 
 			// substitute name
+			server.cacheMux.Lock()
 			if text, ok := server.entityCache[qres.Target.(string)]; ok {
 				qres.Target = text
 			}
+			server.cacheMux.Unlock()
 
 			if target.Data.Name != "" {
 				qres.Target = target.Data.Name
