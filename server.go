@@ -181,7 +181,8 @@ func (server *Server) queryHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func roundTimestampMS(ts int64, group string) int64 {
-	t := time.Unix(ts/1000, 0)
+	const millisPerSecond = 1000
+	t := time.Unix(ts/millisPerSecond, 0)
 
 	switch group {
 	case "hour":
@@ -204,6 +205,7 @@ func (server *Server) executeQuery(qr grafana.QueryRequest) []grafana.QueryRespo
 
 		go func(idx int, target grafana.Target) {
 			var qres grafana.QueryResponse
+
 			context := strings.ToLower(target.Data.Context)
 			if context == "prognosis" {
 				qres = server.queryPrognosis(target)
@@ -223,6 +225,7 @@ func (server *Server) executeQuery(qr grafana.QueryRequest) []grafana.QueryRespo
 			}
 
 			res[idx] = qres
+
 			wg.Done()
 		}(idx, target)
 	}

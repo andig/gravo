@@ -74,7 +74,7 @@ func (api *client) Get(endpoint string) (io.ReadCloser, error) {
 	}
 
 	duration := time.Since(start)
-	log.Printf("GET %s (%dms)", url, duration.Nanoseconds()/1e6)
+	log.Printf("GET %s (%dms)", url, duration.Milliseconds())
 
 	if api.debug {
 		if err := api.debugResponseBody(resp); err != nil {
@@ -165,9 +165,8 @@ func (api *client) QueryEntity(entity string) (Entity, error) {
 func (api *client) QueryData(uuid string, from time.Time, to time.Time,
 	group string, options string, tuples int,
 ) ([]Tuple, error) {
-	f := from.Unix()
-	t := to.Unix()
-	url := fmt.Sprintf("/data/%s.json?from=%d&to=%d", uuid, f*1000, t*1000)
+	const n2m = int64(time.Millisecond) // nano to milli seconds
+	url := fmt.Sprintf("/data/%s.json?from=%d&to=%d", uuid, from.UnixNano()/n2m, to.UnixNano()/n2m)
 
 	if tuples > 0 {
 		url += fmt.Sprintf("&tuples=%d", tuples)

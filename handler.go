@@ -26,6 +26,7 @@ func allowed(f http.HandlerFunc, methods ...string) http.HandlerFunc {
 				return
 			}
 		}
+
 		http.Error(w, "Bad method; supported OPTIONS, POST", http.StatusBadRequest)
 	}
 }
@@ -36,13 +37,16 @@ func logger(f http.HandlerFunc, debug bool) http.HandlerFunc {
 		start := time.Now()
 
 		var body []byte
+
 		if debug {
 			// get request body
 			var err error
 			body, err = ioutil.ReadAll(r.Body)
+
 			if err != nil {
 				log.Print(err)
 			}
+
 			r.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 
 			// get response body
@@ -52,7 +56,7 @@ func logger(f http.HandlerFunc, debug bool) http.HandlerFunc {
 		f(w, r)
 
 		duration := time.Since(start)
-		log.Printf("%v %v (%dms)", r.Method, r.URL.Path, duration.Nanoseconds()/1e6)
+		log.Printf("%v %v (%dms)", r.Method, r.URL.Path, duration.Milliseconds())
 
 		if debug {
 			log.Println("Request:\n" + string(body))
