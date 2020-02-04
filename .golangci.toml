@@ -6,4 +6,5 @@
   disable = [
     "gochecknoglobals",
     "gofmt",
+    "gomnd"
   ]
