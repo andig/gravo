@@ -104,12 +104,12 @@ func (server *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 
 func (server *Server) flattenEntities(result *[]volkszaehler.Entity, entities []volkszaehler.Entity, parent string) {
 	for _, entity := range entities {
+                if parent != "" {
+                        entity.Title = fmt.Sprintf("%s/%s", parent, entity.Title)
+                }		
 		if entity.Type == "group" || entity.Type == "building" || entity.Type == "user" {
 			server.flattenEntities(result, entity.Children, entity.Title)
 		} else {
-			if parent != "" {
-				entity.Title = fmt.Sprintf("%s (%s)", entity.Title, parent)
-			}
 			*result = append(*result, entity)
 		}
 	}
