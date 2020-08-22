@@ -106,8 +106,8 @@ func (server *Server) flattenEntities(result *[]volkszaehler.Entity, entities []
 	for _, entity := range entities {
 		if parent != "" {
 			entity.Title = fmt.Sprintf("%s/%s", parent, entity.Title)
-		}			
-		if entity.Type == "group" {
+		}
+		if entity.Type == "group" || entity.Type == "building" || entity.Type == "user"   {
 			server.flattenEntities(result, entity.Children, entity.Title)
 		} else {
 			*result = append(*result, entity)
