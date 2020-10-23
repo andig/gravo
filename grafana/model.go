@@ -67,7 +67,7 @@ type TagValueResponse struct {
 // QueryRequest encodes the information provided by Grafana in /query.
 // https://github.com/grafana/simple-json-datasource#query-api
 type QueryRequest struct {
-	PanelID       int           `json:"panelId"`
+	PanelID       int64         `json:"panelId"`
 	Range         Range         `json:"range"`
 	RangeRaw      RelativeRange `json:"rangeRaw"`
 	Interval      string        `json:"interval"`
