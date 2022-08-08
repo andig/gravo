@@ -105,7 +105,7 @@ type Target struct {
 	Target string     `json:"target"`
 	RefID  string     `json:"refId"`
 	Type   string     `json:"type"`
-	Data   TargetData `json:"data,omitempty"`
+	Data   TargetData `json:"payload"`
 }
 
 // TargetData describes the query target details
